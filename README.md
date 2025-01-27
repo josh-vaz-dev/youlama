@@ -1,10 +1,10 @@
-# YouTube Summarizer by TCSenpai
+# YouLama by TCSenpai
 
 [![justforfunnoreally.dev badge](https://img.shields.io/badge/justforfunnoreally-dev-9ff)](https://justforfunnoreally.dev)
 
-YouTube Summarizer is a Streamlit-based web application that allows users to generate summaries of YouTube videos using AI-powered language models and optionally Whisper for transcription.
+YouLama is a Streamlit-based web application that allows users to generate summaries of YouTube videos using AI-powered language models and optionally Whisper for transcription.
 
-- [YouTube Summarizer by TCSenpai](#youtube-summarizer-by-tcsenpai)
+- [YouLama by TCSenpai](#youlama-by-tcsenpai)
   - [Features](#features)
   - [Installation](#installation)
   - [Usage](#usage)
@@ -34,8 +34,8 @@ YouTube Summarizer is a Streamlit-based web application that allows users to gen
 1. Clone the repository:
 
    ```
-   git clone https://github.com/yourusername/youtube-summarizer.git
-   cd youtube-summarizer
+   git clone git@github.com:tcsenpai/youlama.git
+   cd youlama
    ```
 
 2. Install the required dependencies:
