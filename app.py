@@ -96,7 +96,7 @@ OLLAMA_MODELS = ollama.get_available_models() if OLLAMA_AVAILABLE else []
 DEFAULT_OLLAMA_MODEL = ollama.get_default_model() if OLLAMA_AVAILABLE else None
 
 
-def load_model(model_name: str) -> whisperx.WhisperModel:
+def load_model(model_name: str):
     """Load the WhisperX model with the specified configuration."""
     try:
         logger.info(f"Loading WhisperX model: {model_name}")
