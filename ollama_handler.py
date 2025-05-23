@@ -1,8 +1,8 @@
-import requests
-from typing import Optional
-import configparser
 import os
+import configparser
 import logging
+from typing import List, Optional
+from ollama import Client
 
 # Configure logging
 logging.basicConfig(
@@ -11,81 +11,54 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def load_config() -> configparser.ConfigParser:
-    """Load configuration from config.ini file."""
-    config = configparser.ConfigParser()
-    config_path = os.path.join(os.path.dirname(__file__), "config.ini")
-    config.read(config_path)
-    return config
-
-
-config = load_config()
-
-
 class OllamaHandler:
     def __init__(self):
-        self.enabled = config["ollama"].getboolean("enabled")
-        self.url = config["ollama"]["url"]
-        self.default_model = config["ollama"]["default_model"]
-        self.prompt = config["ollama"]["summarize_prompt"]
-        logger.info(
-            f"Initialized Ollama handler with URL: {self.url}, Default model: {self.default_model}"
-        )
-        logger.info(f"Ollama enabled: {self.enabled}")
+        """Initialize Ollama handler with configuration."""
+        self.config = self._load_config()
+        self.endpoint = self.config["ollama"]["url"]
+        self.default_model = self.config["ollama"]["default_model"]
+        self.summarize_prompt = self.config["ollama"]["summarize_prompt"]
+        self.client = Client(host=self.endpoint)
+        self.available = self._check_availability()
+        logger.info(f"Initialized Ollama handler with endpoint: {self.endpoint}")
+        logger.info(f"Default model: {self.default_model}")
+        logger.info(f"Ollama available: {self.available}")
+
+    def _load_config(self) -> configparser.ConfigParser:
+        """Load configuration from config.ini file."""
+        config = configparser.ConfigParser()
+        config_path = os.path.join(os.path.dirname(__file__), "config.ini")
+        config.read(config_path)
+        return config
+
+    def _check_availability(self) -> bool:
+        """Check if Ollama server is available."""
+        try:
+            self.client.list()
+            logger.info("Ollama server is available")
+            return True
+        except Exception as e:
+            logger.warning(f"Ollama server is not available: {str(e)}")
+            return False
 
     def is_available(self) -> bool:
-        """Check if Ollama is available and enabled."""
-        if not self.enabled:
-            logger.info("Ollama is disabled in config")
-            return False
-        try:
-            logger.info(f"Checking Ollama availability at {self.url}")
-            response = requests.get(f"{self.url}/api/tags")
-            available = response.status_code == 200
-            logger.info(
-                f"Ollama server response: {'available' if available else 'unavailable'}"
-            )
-            return available
-        except Exception as e:
-            logger.error(f"Error checking Ollama availability: {str(e)}")
-            return False
+        """Return whether Ollama is available."""
+        return self.available
 
-    def get_available_models(self) -> list:
+    def get_available_models(self) -> List[str]:
         """Get list of available Ollama models."""
         try:
-            logger.info("Fetching available Ollama models")
-            response = requests.get(f"{self.url}/api/tags")
-            if response.status_code == 200:
-                models = [model["name"] for model in response.json()["models"]]
-                logger.info(
-                    f"Found {len(models)} available models: {', '.join(models)}"
-                )
-                return models
-            logger.warning(
-                f"Failed to fetch models. Status code: {response.status_code}"
-            )
-            return []
+            models = self.client.list()
+            model_names = [model["name"] for model in models["models"]]
+            logger.info(f"Found {len(model_names)} available models")
+            return model_names
         except Exception as e:
-            logger.error(f"Error fetching Ollama models: {str(e)}")
+            logger.error(f"Error getting available models: {str(e)}")
             return []
 
-    def validate_model(self, model_name: str) -> tuple[bool, Optional[str]]:
-        """Validate if a model exists and return the first available model if not."""
-        available_models = self.get_available_models()
-        if not available_models:
-            return False, None
-
-        if model_name in available_models:
-            return True, model_name
-
-        logger.warning(
-            f"Model {model_name} not found in available models. Using first available model: {available_models[0]}"
-        )
-        return True, available_models[0]
-
-    def get_default_model(self) -> Optional[str]:
-        """Get the default model, falling back to first available if default is not found."""
-        if not self.is_available():
+    def get_default_model(self) -> str:
+        """Get the default model, falling back to first available if configured model not found."""
+        if not self.available:
             return None
 
         available_models = self.get_available_models()
@@ -95,44 +68,44 @@ class OllamaHandler:
         if self.default_model in available_models:
             logger.info(f"Using configured default model: {self.default_model}")
             return self.default_model
+        else:
+            logger.warning(
+                f"Configured model '{self.default_model}' not found, using first available model: {available_models[0]}"
+            )
+            return available_models[0]
 
-        logger.warning(
-            f"Configured model '{self.default_model}' not found in available models. Using first available model: {available_models[0]}"
-        )
-        return available_models[0]
-
-    def summarize(self, text: str, model: Optional[str] = None) -> Optional[str]:
+    def summarize(self, text: str, model: str = None) -> Optional[str]:
         """Summarize text using Ollama."""
-        if not self.is_available():
-            logger.warning("Attempted to summarize with Ollama unavailable")
+        if not self.available:
+            logger.warning("Cannot summarize: Ollama is not available")
             return None
 
-        # Validate and get the correct model
-        is_valid, valid_model = self.validate_model(model or self.default_model)
-        if not is_valid:
-            logger.error("No valid Ollama models available")
+        if not text:
+            logger.warning("Cannot summarize: Empty text provided")
             return None
 
-        prompt = f"{self.prompt}\n\n{text}"
-        logger.info(f"Generating summary using model: {valid_model}")
-        logger.info(f"Input text length: {len(text)} characters")
+        model = model or self.default_model
+        if not model:
+            logger.warning("Cannot summarize: No model specified")
+            return None
 
         try:
-            response = requests.post(
-                f"{self.url}/api/generate",
-                json={"model": valid_model, "prompt": prompt, "stream": False},
+            logger.info(f"Generating summary using model: {model}")
+            logger.info(f"Input text length: {len(text)} characters")
+
+            # Generate the summary using the prompt from config
+            response = self.client.chat(
+                model=model,
+                messages=[
+                    {"role": "system", "content": self.summarize_prompt},
+                    {"role": "user", "content": text},
+                ],
             )
 
-            if response.status_code == 200:
-                summary = response.json()["response"]
-                logger.info(
-                    f"Successfully generated summary of length: {len(summary)} characters"
-                )
-                return summary
-            logger.error(
-                f"Failed to generate summary. Status code: {response.status_code}"
-            )
-            return None
+            summary = response["message"]["content"]
+            logger.info(f"Summary generated. Length: {len(summary)} characters")
+            return summary
+
         except Exception as e:
-            logger.error(f"Error during summarization: {str(e)}")
+            logger.error(f"Error generating summary: {str(e)}")
             return None

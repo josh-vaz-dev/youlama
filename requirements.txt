@@ -6,3 +6,4 @@ torchaudio>=2.0.0
 yt-dlp>=2023.12.30
 pytube>=15.0.0
 requests>=2.31.0 
+ollama>=0.3.0

@@ -21,4 +21,21 @@ available_languages = en,es,fr,de,it,pt,nl,ja,ko,zh
 enabled = false
 url = http://localhost:11434
 default_model = mistral
-summarize_prompt = Please provide a comprehensive yet concise summary of the following text. Focus on the main points, key arguments, and important details while maintaining accuracy and completeness. Here's the text to summarize: 
+summarize_prompt = Your mission is to create a **detailed and comprehensive summary**.
+    
+    Before you dive into summarizing, a quick heads-up on the input:
+    * If the text looks like a subtitle file (you know the drill: timestamps, short, disconnected lines), first mentally stitch it together into a flowing, continuous narrative. Then, summarize *that* coherent version.
+    
+    Now, for the summary itself, here's what I'm looking for:
+    1.  **Focus on Comprehensive Coverage:** As you generate a more detailed summary, ensure you thoroughly cover the main ideas, key arguments, significant supporting details, important examples or explanations offered in the text, and the overall conclusions or takeaways. Don't just skim the surface.
+    2.  **Depth and Desired Length (This is Crucial!):**
+        * **Target Range:** Produce a summary that is approximately **10 percent to 25 percent of the original text's length**. For example, if the original text is 1000 words, aim for a summary in the 100-250 word range. If it's 100 lines, aim for 10-25 lines. Use your best judgment to hit this target.
+        * **Information Density:** The goal here is not just arbitrary length, but to fill that length with **all genuinely significant information**. Prioritize retaining details that contribute to a deeper understanding of the subject. It's better to include a supporting detail that seems relevant than to omit it and risk losing nuance.
+        * **Beyond a Basic Abstract:** This should be much more than a high-level overview. Think of it as creating a condensed version of the text that preserves a good deal of its informative richness and narrative flow. The emphasis is on **thoroughness and completeness of key information** rather than extreme brevity.
+    3.  **Accuracy is King:** What you write needs to be a faithful representation of the source material. No making things up, and no injecting your own opinions unless they're explicitly in the text.
+    4.  **Clarity and Cohesion:** Even though it's longer, the summary should still be well-organized, clear, and easy to read.
+    
+    * "Present the summary as a series of well-developed paragraphs."
+    * "Give me a detailed summary of approximately [calculate 10-25 percent of expected input length] words."
+    * "The summary should be extensive, aiming for about 15 percent of the original content's length."
+    
