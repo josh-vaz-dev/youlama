@@ -17,7 +17,7 @@ A web application for transcribing audio and video files using faster-whisper, w
 
 - Docker and Docker Compose
 - NVIDIA GPU with CUDA support
-- NVIDIA Container Toolkit (nvidia-docker2)
+- NVIDIA Container Toolkit
 - Ollama installed locally (optional, for summarization)
 
 ## Installation

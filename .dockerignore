@@ -1,0 +1,57 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Project specific
+models/
+*.log
+*.mp3
+*.wav
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.flac
+*.ogg
+*.m4a
+*.aac
+
+# Documentation
+README.md
+LICENSE
+*.md
+docs/
+
+# Test files
+tests/
+test/
+*.test
+*.spec 
