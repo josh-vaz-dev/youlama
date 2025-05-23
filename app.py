@@ -1,12 +1,12 @@
 import os
 import gradio as gr
-from faster_whisper import WhisperModel
 import torch
 import configparser
 from typing import List, Tuple, Optional
 import youtube_handler as yt
 from ollama_handler import OllamaHandler
 import logging
+import whisperx
 import subprocess
 import sys
 
@@ -15,6 +15,39 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+
+def check_cuda_compatibility():
+    """Check if the current CUDA setup is compatible with WhisperX."""
+    logger.info("Checking CUDA compatibility...")
+
+    # Check PyTorch CUDA
+    if not torch.cuda.is_available():
+        logger.warning("CUDA is not available in PyTorch")
+        return False
+
+    cuda_version = torch.version.cuda
+    cudnn_version = torch.backends.cudnn.version()
+    device_name = torch.cuda.get_device_name(0)
+
+    logger.info(f"CUDA Version: {cuda_version}")
+    logger.info(f"cuDNN Version: {cudnn_version}")
+    logger.info(f"GPU Device: {device_name}")
+
+    # Check CUDA version
+    try:
+        cuda_major = int(cuda_version.split(".")[0])
+        if cuda_major > 11:
+            logger.warning(
+                f"CUDA {cuda_version} might not be fully compatible with WhisperX. Recommended: CUDA 11.x"
+            )
+            logger.info(
+                "Consider creating a new environment with CUDA 11.x if you encounter issues"
+            )
+    except Exception as e:
+        logger.error(f"Error parsing CUDA version: {str(e)}")
+
+    return True
 
 
 def load_config() -> configparser.ConfigParser:
@@ -28,7 +61,7 @@ def load_config() -> configparser.ConfigParser:
 # Load configuration
 config = load_config()
 
-# Whisper configuration
+# WhisperX configuration
 DEFAULT_MODEL = config["whisper"]["default_model"]
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 COMPUTE_TYPE = "float32"  # Always use float32 for better compatibility
@@ -63,11 +96,11 @@ OLLAMA_MODELS = ollama.get_available_models() if OLLAMA_AVAILABLE else []
 DEFAULT_OLLAMA_MODEL = ollama.get_default_model() if OLLAMA_AVAILABLE else None
 
 
-def load_model(model_name: str) -> WhisperModel:
-    """Load the Whisper model with the specified configuration."""
+def load_model(model_name: str) -> whisperx.WhisperModel:
+    """Load the WhisperX model with the specified configuration."""
     try:
-        logger.info(f"Loading Whisper model: {model_name}")
-        return WhisperModel(
+        logger.info(f"Loading WhisperX model: {model_name}")
+        return whisperx.load_model(
             model_name,
             device=DEVICE,
             compute_type=COMPUTE_TYPE,
@@ -76,7 +109,7 @@ def load_model(model_name: str) -> WhisperModel:
     except Exception as e:
         logger.error(f"Error loading model with CUDA: {str(e)}")
         logger.info("Falling back to CPU")
-        return WhisperModel(
+        return whisperx.load_model(
             model_name,
             device="cpu",
             compute_type="float32",
@@ -91,7 +124,7 @@ def transcribe_audio(
     summarize: bool = False,
     ollama_model: str = None,
 ) -> tuple[str, str, Optional[str]]:
-    """Transcribe audio using the selected Whisper model."""
+    """Transcribe audio using the selected WhisperX model."""
     try:
         logger.info(f"Starting transcription of {audio_file}")
         logger.info(
@@ -103,19 +136,19 @@ def transcribe_audio(
 
         # Transcribe the audio
         logger.info("Starting audio transcription...")
-        segments, info = model.transcribe(
+        result = model.transcribe(
             audio_file,
             language=language if language != "Auto-detect" else None,
             beam_size=BEAM_SIZE,
             vad_filter=VAD_FILTER,
         )
 
-        # Combine all segments into one text
-        full_text = " ".join([segment.text for segment in segments])
+        # Get the full text with timestamps
+        full_text = " ".join([segment["text"] for segment in result["segments"]])
         logger.info(
             f"Transcription completed. Text length: {len(full_text)} characters"
         )
-        logger.info(f"Detected language: {info.language}")
+        logger.info(f"Detected language: {result['language']}")
 
         # Generate summary if requested
         summary = None
@@ -127,7 +160,7 @@ def transcribe_audio(
             else:
                 logger.warning("Failed to generate summary")
 
-        return full_text, info.language, summary
+        return full_text, result["language"], summary
     except Exception as e:
         logger.error(f"Error during transcription: {str(e)}")
         return f"Error during transcription: {str(e)}", None, None
@@ -205,7 +238,7 @@ def process_youtube_url(
 def create_interface():
     """Create and return the Gradio interface."""
     with gr.Blocks(theme=gr.themes.Soft()) as app:
-        gr.Markdown("# 🎙️ Audio/Video Transcription with Whisper")
+        gr.Markdown("# 🎙️ Audio/Video Transcription with WhisperX")
         gr.Markdown(
             "### A powerful tool for transcribing and summarizing audio/video content"
         )
@@ -233,7 +266,7 @@ def create_interface():
                         yt_model_dropdown = gr.Dropdown(
                             choices=WHISPER_MODELS,
                             value=DEFAULT_MODEL,
-                            label="Select Whisper Model",
+                            label="Select WhisperX Model",
                         )
                         yt_language_dropdown = gr.Dropdown(
                             choices=["Auto-detect"] + AVAILABLE_LANGUAGES,
@@ -345,7 +378,7 @@ def create_interface():
                 gr.Markdown(
                     """
                 ### Local File Transcription
-                Upload an audio or video file to transcribe it using Whisper AI.
+                Upload an audio or video file to transcribe it using WhisperX.
                 - Supports various audio and video formats
                 - Automatic language detection
                 - Optional summarization with Ollama
@@ -361,7 +394,7 @@ def create_interface():
                         model_dropdown = gr.Dropdown(
                             choices=WHISPER_MODELS,
                             value=DEFAULT_MODEL,
-                            label="Select Whisper Model",
+                            label="Select WhisperX Model",
                         )
                         language_dropdown = gr.Dropdown(
                             choices=["Auto-detect"] + AVAILABLE_LANGUAGES,
@@ -423,27 +456,34 @@ def create_interface():
                         model = load_model(model)
 
                         status = "Transcribing audio..."
-                        segments, info = model.transcribe(
+                        result = model.transcribe(
                             audio,
                             language=lang if lang != "Auto-detect" else None,
                             beam_size=BEAM_SIZE,
                             vad_filter=VAD_FILTER,
                         )
 
-                        # Combine all segments into one text
-                        full_text = " ".join([segment.text for segment in segments])
+                        # Get the full text with timestamps
+                        full_text = " ".join(
+                            [segment["text"] for segment in result["segments"]]
+                        )
 
                         if summarize and OLLAMA_AVAILABLE:
                             status = "Generating summary..."
                             summary = ollama.summarize(full_text, ollama_model)
                             return (
                                 full_text,
-                                info.language,
+                                result["language"],
                                 summary if summary else "",
                                 "Processing complete!",
                             )
                         else:
-                            return full_text, info.language, "", "Processing complete!"
+                            return (
+                                full_text,
+                                result["language"],
+                                "",
+                                "Processing complete!",
+                            )
 
                     except Exception as e:
                         logger.error(f"Error in transcribe_with_summary: {str(e)}")
@@ -489,50 +529,8 @@ def create_interface():
     return app
 
 
-def check_cuda_compatibility():
-    """Check if the current CUDA setup is compatible with Whisper."""
-    logger.info("Checking CUDA compatibility...")
-
-    # Check PyTorch CUDA
-    if not torch.cuda.is_available():
-        logger.warning("CUDA is not available in PyTorch")
-        return False
-
-    cuda_version = torch.version.cuda
-    cudnn_version = torch.backends.cudnn.version()
-    device_name = torch.cuda.get_device_name(0)
-
-    logger.info(f"CUDA Version: {cuda_version}")
-    logger.info(f"cuDNN Version: {cudnn_version}")
-    logger.info(f"GPU Device: {device_name}")
-
-    # Check CUDA version
-    try:
-        cuda_major = int(cuda_version.split(".")[0])
-        if cuda_major > 11:
-            logger.warning(
-                f"CUDA {cuda_version} might not be fully compatible with Whisper. Recommended: CUDA 11.x"
-            )
-            logger.info(
-                "Consider creating a new environment with CUDA 11.x if you encounter issues"
-            )
-    except Exception as e:
-        logger.error(f"Error parsing CUDA version: {str(e)}")
-
-    # Check if faster-whisper is installed
-    try:
-        import faster_whisper
-
-        logger.info(f"faster-whisper version: {faster_whisper.__version__}")
-    except ImportError:
-        logger.error("faster-whisper is not installed")
-        return False
-
-    return True
-
-
 if __name__ == "__main__":
-    logger.info("Starting Whisper Transcription Web App")
+    logger.info("Starting WhisperX Transcription Web App")
 
     # Check CUDA compatibility before starting
     if not check_cuda_compatibility():

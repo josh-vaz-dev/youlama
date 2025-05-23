@@ -14,9 +14,10 @@ A user-friendly web application for transcribing audio and video files using Ope
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - CUDA-capable GPU (recommended)
 - FFmpeg (for audio/video processing)
+- uv package manager
 
 ## Installation
 
@@ -26,15 +27,14 @@ git clone <repository-url>
 cd whisperapp
 ```
 
-2. Create a virtual environment and activate it:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install uv (recommended package installer):
+2. Install uv (if you just pip install you might break your environment):
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+3. Create a venv with uv:
+```bash
+uv venv --python=3.10
 ```
 
 4. Install the required packages using uv:
