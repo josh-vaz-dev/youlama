@@ -325,6 +325,12 @@ def create_interface():
                             )
                         yt_process_btn = gr.Button("Process Video", variant="primary")
 
+                        # Move summary text below the button
+                        if OLLAMA_AVAILABLE:
+                            yt_summary_text = gr.Textbox(
+                                label="Summary", lines=5, max_lines=10, visible=False
+                            )
+
                     with gr.Column():
                         # YouTube output components
                         yt_output_text = gr.Textbox(
@@ -334,10 +340,6 @@ def create_interface():
                             label="Detected Language", interactive=False
                         )
                         yt_source = gr.Textbox(label="Source", interactive=False)
-                        if OLLAMA_AVAILABLE:
-                            yt_summary_text = gr.Textbox(
-                                label="Summary", lines=5, max_lines=10, visible=False
-                            )
 
                 # Set up the event handler
                 def process_yt_with_summary(url, model, lang, summarize, ollama_model):
