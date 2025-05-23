@@ -187,7 +187,7 @@ def create_interface():
             "### A powerful tool for transcribing and summarizing audio/video content"
         )
 
-        with gr.Tabs(selected=1) as tabs:  # Set YouTube tab as default (index 1)
+        with gr.Tabs(selected="YouTube") as tabs:  # Use tab name instead of index
             with gr.TabItem("Local File"):
                 gr.Markdown(
                     """
@@ -263,14 +263,13 @@ def create_interface():
                 ):
                     try:
                         if not audio:
-                            yield "", None, "", "Please upload an audio file"
-                            return
+                            return "", None, "", "Please upload an audio file"
 
                         # Update status for each step
-                        yield "Loading model...", None, "", None
+                        status = "Loading model..."
                         model = load_model(model)
 
-                        yield "Transcribing audio...", None, "", None
+                        status = "Transcribing audio..."
                         segments, info = model.transcribe(
                             audio,
                             language=lang if lang != "Auto-detect" else None,
@@ -282,17 +281,20 @@ def create_interface():
                         full_text = " ".join([segment.text for segment in segments])
 
                         if summarize and OLLAMA_AVAILABLE:
-                            yield f"Generating summary...", info.language, "", None
+                            status = "Generating summary..."
                             summary = ollama.summarize(full_text, ollama_model)
-                            yield full_text, info.language, (
-                                summary if summary else ""
-                            ), "Processing complete!"
+                            return (
+                                full_text,
+                                info.language,
+                                summary if summary else "",
+                                "Processing complete!",
+                            )
                         else:
-                            yield full_text, info.language, "", "Processing complete!"
+                            return full_text, info.language, "", "Processing complete!"
 
                     except Exception as e:
                         logger.error(f"Error in transcribe_with_summary: {str(e)}")
-                        yield f"Error: {str(e)}", None, "", "Processing failed!"
+                        return f"Error: {str(e)}", None, "", "Processing failed!"
 
                 transcribe_btn.click(
                     fn=transcribe_with_summary,
@@ -389,7 +391,7 @@ def create_interface():
                 def process_yt_with_summary(url, model, lang, summarize, ollama_model):
                     try:
                         # Update status for each step
-                        yield "Checking URL and fetching video information...", None, None, None, None
+                        status = "Checking URL and fetching video information..."
                         result = process_youtube_url(
                             url, model, lang, summarize, ollama_model
                         )
@@ -397,23 +399,31 @@ def create_interface():
                         if len(result) == 4:
                             text, lang, source, summary = result
                             if source == "Subtitles":
-                                yield f"Processing subtitles...", None, None, None, None
+                                status = "Processing subtitles..."
                             else:
-                                yield f"Transcribing video...", None, None, None, None
+                                status = "Transcribing video..."
 
                             if summarize and summary:
-                                yield f"Generating summary...", None, None, None, None
+                                status = "Generating summary..."
 
-                            yield text, lang, source, (
-                                summary if summary else ""
-                            ), "Processing complete!"
+                            return (
+                                text,
+                                lang,
+                                source,
+                                summary if summary else "",
+                                "Processing complete!",
+                            )
                         else:
-                            yield result[0], result[1], result[
-                                2
-                            ], "", f"Error: {result[0]}"
+                            return (
+                                result[0],
+                                result[1],
+                                result[2],
+                                "",
+                                f"Error: {result[0]}",
+                            )
                     except Exception as e:
                         logger.error(f"Error in process_yt_with_summary: {str(e)}")
-                        yield f"Error: {str(e)}", None, None, "", "Processing failed!"
+                        return f"Error: {str(e)}", None, None, "", "Processing failed!"
 
                 yt_process_btn.click(
                     fn=process_yt_with_summary,
