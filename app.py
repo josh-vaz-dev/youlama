@@ -65,8 +65,7 @@ config = load_config()
 DEFAULT_MODEL = config["whisper"]["default_model"]
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 COMPUTE_TYPE = "float32"  # Always use float32 for better compatibility
-BEAM_SIZE = config["whisper"].getint("beam_size")
-VAD_FILTER = config["whisper"].getboolean("vad_filter")
+BATCH_SIZE = config["whisper"].getint("batch_size")
 
 # Log device and compute type
 logger.info(f"PyTorch CUDA available: {torch.cuda.is_available()}")
@@ -76,7 +75,7 @@ if torch.cuda.is_available():
     logger.info(f"cuDNN version: {torch.backends.cudnn.version()}")
 logger.info(f"Using device: {DEVICE}, compute type: {COMPUTE_TYPE}")
 logger.info(
-    f"Default model: {DEFAULT_MODEL}, beam size: {BEAM_SIZE}, VAD filter: {VAD_FILTER}"
+    f"Default model: {DEFAULT_MODEL}, batch size: {BATCH_SIZE}"
 )
 
 # App configuration
@@ -140,9 +139,6 @@ def transcribe_audio(
             audio_file,
             language=language if language != "Auto-detect" else None,
             batch_size=16,  # WhisperX uses batch_size instead of beam_size
-            vad=(
-                True if VAD_FILTER else False
-            ),  # WhisperX uses vad instead of vad_filter
         )
 
         # Get the full text with timestamps
