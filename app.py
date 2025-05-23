@@ -7,6 +7,8 @@ from typing import List, Tuple, Optional
 import youtube_handler as yt
 from ollama_handler import OllamaHandler
 import logging
+import subprocess
+import sys
 
 # Configure logging
 logging.basicConfig(
@@ -487,8 +489,57 @@ def create_interface():
     return app
 
 
+def check_cuda_compatibility():
+    """Check if the current CUDA setup is compatible with Whisper."""
+    logger.info("Checking CUDA compatibility...")
+
+    # Check PyTorch CUDA
+    if not torch.cuda.is_available():
+        logger.warning("CUDA is not available in PyTorch")
+        return False
+
+    cuda_version = torch.version.cuda
+    cudnn_version = torch.backends.cudnn.version()
+    device_name = torch.cuda.get_device_name(0)
+
+    logger.info(f"CUDA Version: {cuda_version}")
+    logger.info(f"cuDNN Version: {cudnn_version}")
+    logger.info(f"GPU Device: {device_name}")
+
+    # Check CUDA version
+    try:
+        cuda_major = int(cuda_version.split(".")[0])
+        if cuda_major > 11:
+            logger.warning(
+                f"CUDA {cuda_version} might not be fully compatible with Whisper. Recommended: CUDA 11.x"
+            )
+            logger.info(
+                "Consider creating a new environment with CUDA 11.x if you encounter issues"
+            )
+    except Exception as e:
+        logger.error(f"Error parsing CUDA version: {str(e)}")
+
+    # Check if faster-whisper is installed
+    try:
+        import faster_whisper
+
+        logger.info(f"faster-whisper version: {faster_whisper.__version__}")
+    except ImportError:
+        logger.error("faster-whisper is not installed")
+        return False
+
+    return True
+
+
 if __name__ == "__main__":
     logger.info("Starting Whisper Transcription Web App")
+
+    # Check CUDA compatibility before starting
+    if not check_cuda_compatibility():
+        logger.warning(
+            "CUDA compatibility check failed. The application might not work as expected."
+        )
+
     logger.info(f"Server will be available at http://{SERVER_NAME}:{SERVER_PORT}")
     app = create_interface()
     app.launch(share=SHARE, server_name=SERVER_NAME, server_port=SERVER_PORT)
