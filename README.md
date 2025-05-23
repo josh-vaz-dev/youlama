@@ -54,14 +54,6 @@ cp .env.example .env
 
 ## Configuration
 
-### Environment Variables (.env)
-
-```ini
-# Server configuration
-SERVER_NAME=0.0.0.0
-SERVER_PORT=7860
-SHARE=true
-```
 
 ### Application Settings (config.ini)
 
