@@ -6,6 +6,13 @@ import configparser
 from typing import List, Tuple, Optional
 import youtube_handler as yt
 from ollama_handler import OllamaHandler
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
 def load_config() -> configparser.ConfigParser:
@@ -26,6 +33,11 @@ COMPUTE_TYPE = config["whisper"]["compute_type"] if DEVICE == "cuda" else "float
 BEAM_SIZE = config["whisper"].getint("beam_size")
 VAD_FILTER = config["whisper"].getboolean("vad_filter")
 
+logger.info(f"Initialized Whisper with device: {DEVICE}, compute type: {COMPUTE_TYPE}")
+logger.info(
+    f"Default model: {DEFAULT_MODEL}, beam size: {BEAM_SIZE}, VAD filter: {VAD_FILTER}"
+)
+
 # App configuration
 MAX_DURATION = config["app"].getint("max_duration")
 SERVER_NAME = config["app"]["server_name"]
@@ -44,6 +56,7 @@ OLLAMA_MODELS = ollama.get_available_models() if OLLAMA_AVAILABLE else []
 
 def load_model(model_name: str) -> WhisperModel:
     """Load the Whisper model with the specified configuration."""
+    logger.info(f"Loading Whisper model: {model_name}")
     return WhisperModel(model_name, device=DEVICE, compute_type=COMPUTE_TYPE)
 
 
@@ -56,10 +69,16 @@ def transcribe_audio(
 ) -> tuple[str, str, Optional[str]]:
     """Transcribe audio using the selected Whisper model."""
     try:
+        logger.info(f"Starting transcription of {audio_file}")
+        logger.info(
+            f"Model: {model_name}, Language: {language}, Summarize: {summarize}"
+        )
+
         # Load the model
         model = load_model(model_name)
 
         # Transcribe the audio
+        logger.info("Starting audio transcription...")
         segments, info = model.transcribe(
             audio_file,
             language=language if language != "Auto-detect" else None,
@@ -69,14 +88,24 @@ def transcribe_audio(
 
         # Combine all segments into one text
         full_text = " ".join([segment.text for segment in segments])
+        logger.info(
+            f"Transcription completed. Text length: {len(full_text)} characters"
+        )
+        logger.info(f"Detected language: {info.language}")
 
         # Generate summary if requested
         summary = None
         if summarize and OLLAMA_AVAILABLE:
+            logger.info(f"Generating summary using Ollama model: {ollama_model}")
             summary = ollama.summarize(full_text, ollama_model)
+            if summary:
+                logger.info(f"Summary generated. Length: {len(summary)} characters")
+            else:
+                logger.warning("Failed to generate summary")
 
         return full_text, info.language, summary
     except Exception as e:
+        logger.error(f"Error during transcription: {str(e)}")
         return f"Error during transcription: {str(e)}", None, None
 
 
@@ -89,25 +118,48 @@ def process_youtube_url(
 ) -> Tuple[str, str, str, Optional[str]]:
     """Process a YouTube URL and return transcription or subtitles."""
     try:
+        logger.info(f"Processing YouTube URL: {url}")
+        logger.info(
+            f"Model: {model_name}, Language: {language}, Summarize: {summarize}"
+        )
+
         # First try to get available subtitles
+        logger.info("Checking for available subtitles...")
         available_subs = yt.get_available_subtitles(url)
 
         if available_subs:
+            logger.info(f"Found available subtitles: {', '.join(available_subs)}")
             # Try to download English subtitles first, then fall back to any available
             subtitle_path = yt.download_subtitles(url, "en")
             if not subtitle_path:
+                logger.info(
+                    "English subtitles not available, trying first available language"
+                )
                 subtitle_path = yt.download_subtitles(url, available_subs[0])
 
             if subtitle_path:
+                logger.info(f"Successfully downloaded subtitles to: {subtitle_path}")
                 with open(subtitle_path, "r", encoding="utf-8") as f:
                     text = f.read()
                     summary = None
                     if summarize and OLLAMA_AVAILABLE:
+                        logger.info(
+                            f"Generating summary from subtitles using Ollama model: {ollama_model}"
+                        )
                         summary = ollama.summarize(text, ollama_model)
+                        if summary:
+                            logger.info(
+                                f"Summary generated. Length: {len(summary)} characters"
+                            )
+                        else:
+                            logger.warning("Failed to generate summary")
                     return text, "en", "Subtitles", summary
 
         # If no subtitles available, download and transcribe
+        logger.info("No subtitles available, downloading video for transcription...")
         audio_path, video_title = yt.download_video(url)
+        logger.info(f"Video downloaded: {video_title}")
+
         transcription, detected_lang, summary = transcribe_audio(
             audio_path, model_name, language, summarize, ollama_model
         )
@@ -115,12 +167,14 @@ def process_youtube_url(
         # Clean up the temporary audio file
         try:
             os.remove(audio_path)
-        except:
-            pass
+            logger.info("Cleaned up temporary audio file")
+        except Exception as e:
+            logger.warning(f"Failed to clean up temporary file: {str(e)}")
 
         return transcription, detected_lang, "Transcription", summary
 
     except Exception as e:
+        logger.error(f"Error processing YouTube video: {str(e)}")
         return f"Error processing YouTube video: {str(e)}", None, "Error", None
 
 
@@ -128,11 +182,20 @@ def create_interface():
     """Create and return the Gradio interface."""
     with gr.Blocks(theme=gr.themes.Soft()) as app:
         gr.Markdown("# 🎙️ Audio/Video Transcription with Whisper")
+        gr.Markdown(
+            "### A powerful tool for transcribing and summarizing audio/video content"
+        )
 
         with gr.Tabs() as tabs:
             with gr.TabItem("Local File"):
                 gr.Markdown(
-                    "Upload an audio or video file to transcribe it using Whisper AI."
+                    """
+                ### Local File Transcription
+                Upload an audio or video file to transcribe it using Whisper AI.
+                - Supports various audio and video formats
+                - Automatic language detection
+                - Optional summarization with Ollama
+                """
                 )
 
                 with gr.Row():
@@ -220,7 +283,14 @@ def create_interface():
 
             with gr.TabItem("YouTube"):
                 gr.Markdown(
-                    "Enter a YouTube URL to transcribe the video or extract available subtitles."
+                    """
+                ### YouTube Video Processing
+                Enter a YouTube URL to transcribe the video or extract available subtitles.
+                - Supports youtube.com, youtu.be, and invidious URLs
+                - Automatically extracts subtitles if available
+                - Falls back to transcription if no subtitles found
+                - Optional summarization with Ollama
+                """
                 )
 
                 with gr.Row():
@@ -318,6 +388,12 @@ def create_interface():
         - YouTube videos will first try to use available subtitles
         - If no subtitles are available, the video will be transcribed
         {"- Ollama summarization is available for both local files and YouTube videos" if OLLAMA_AVAILABLE else ""}
+        
+        ### Status:
+        - Device: {DEVICE}
+        - Compute Type: {COMPUTE_TYPE}
+        - Ollama Status: {"Available" if OLLAMA_AVAILABLE else "Not Available"}
+        {"- Available Ollama Models: " + ", ".join(OLLAMA_MODELS) if OLLAMA_AVAILABLE else ""}
         """
         )
 
@@ -325,5 +401,7 @@ def create_interface():
 
 
 if __name__ == "__main__":
+    logger.info("Starting Whisper Transcription Web App")
+    logger.info(f"Server will be available at http://{SERVER_NAME}:{SERVER_PORT}")
     app = create_interface()
     app.launch(share=SHARE, server_name=SERVER_NAME, server_port=SERVER_PORT)
