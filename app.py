@@ -187,7 +187,7 @@ def create_interface():
             "### A powerful tool for transcribing and summarizing audio/video content"
         )
 
-        with gr.Tabs() as tabs:
+        with gr.Tabs(selected=1) as tabs:  # Set YouTube tab as default (index 1)
             with gr.TabItem("Local File"):
                 gr.Markdown(
                     """
@@ -323,6 +323,15 @@ def create_interface():
                                 label="Ollama Model",
                                 interactive=OLLAMA_AVAILABLE,
                             )
+
+                        # Add status bar
+                        yt_status = gr.Textbox(
+                            label="Status",
+                            value="Waiting for input...",
+                            interactive=False,
+                            elem_classes=["status-bar"],
+                        )
+
                         yt_process_btn = gr.Button("Process Video", variant="primary")
 
                     with gr.Column():
@@ -343,13 +352,33 @@ def create_interface():
 
                 # Set up the event handler
                 def process_yt_with_summary(url, model, lang, summarize, ollama_model):
-                    result = process_youtube_url(
-                        url, model, lang, summarize, ollama_model
-                    )
-                    if len(result) == 4:
-                        text, lang, source, summary = result
-                        return text, lang, source, summary if summary else ""
-                    return result[0], result[1], result[2], ""
+                    try:
+                        # Update status for each step
+                        yield "Checking URL and fetching video information...", None, None, None, None
+                        result = process_youtube_url(
+                            url, model, lang, summarize, ollama_model
+                        )
+
+                        if len(result) == 4:
+                            text, lang, source, summary = result
+                            if source == "Subtitles":
+                                yield f"Processing subtitles...", None, None, None, None
+                            else:
+                                yield f"Transcribing video...", None, None, None, None
+
+                            if summarize and summary:
+                                yield f"Generating summary...", None, None, None, None
+
+                            yield text, lang, source, (
+                                summary if summary else ""
+                            ), "Processing complete!"
+                        else:
+                            yield result[0], result[1], result[
+                                2
+                            ], "", f"Error: {result[0]}"
+                    except Exception as e:
+                        logger.error(f"Error in process_yt_with_summary: {str(e)}")
+                        yield f"Error: {str(e)}", None, None, "", "Processing failed!"
 
                 yt_process_btn.click(
                     fn=process_yt_with_summary,
@@ -365,6 +394,7 @@ def create_interface():
                         yt_detected_language,
                         yt_source,
                         yt_summary_text if OLLAMA_AVAILABLE else gr.Textbox(),
+                        yt_status,
                     ],
                 )
 
