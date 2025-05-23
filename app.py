@@ -232,8 +232,8 @@ def create_interface():
                                         gr.Warning(
                                             "Ollama is not available. Please check your Ollama server."
                                         )
-                                        return {"value": False, "visible": False}
-                                    return {"value": checked, "visible": checked}
+                                        return False, False
+                                    return checked, checked
 
                                 summarize_checkbox.change(
                                     fn=toggle_summary,
@@ -337,8 +337,8 @@ def create_interface():
                                         gr.Warning(
                                             "Ollama is not available. Please check your Ollama server."
                                         )
-                                        return {"value": False, "visible": False}
-                                    return {"value": checked, "visible": checked}
+                                        return False, False
+                                    return checked, checked
 
                                 yt_summarize_checkbox.change(
                                     fn=toggle_yt_summary,
