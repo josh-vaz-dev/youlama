@@ -3,7 +3,6 @@ default_model = base
 device = cuda
 compute_type = float32
 batch_size = 16
-vad = true
 
 [app]
 max_duration = 3600

@@ -462,9 +462,6 @@ def create_interface():
                             audio,
                             language=lang if lang != "Auto-detect" else None,
                             batch_size=16,  # WhisperX uses batch_size instead of beam_size
-                            vad=(
-                                True if VAD_FILTER else False
-                            ),  # WhisperX uses vad instead of vad_filter
                         )
 
                         # Get the full text with timestamps
