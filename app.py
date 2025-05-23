@@ -163,7 +163,7 @@ def create_interface():
                                     visible=False,
                                 )
                                 summarize_checkbox.change(
-                                    fn=lambda x: gr.Dropdown.update(visible=x),
+                                    fn=lambda x: {"visible": x},
                                     inputs=[summarize_checkbox],
                                     outputs=[ollama_model_dropdown],
                                 )
@@ -252,7 +252,7 @@ def create_interface():
                                     visible=False,
                                 )
                                 yt_summarize_checkbox.change(
-                                    fn=lambda x: gr.Dropdown.update(visible=x),
+                                    fn=lambda x: {"visible": x},
                                     inputs=[yt_summarize_checkbox],
                                     outputs=[yt_ollama_model_dropdown],
                                 )
