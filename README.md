@@ -1,23 +1,23 @@
 # Audio/Video Transcription Web App
 
-A web application for transcribing audio and video files using WhisperX, with support for YouTube videos and optional summarization using Ollama.
+A web application for transcribing audio and video files using faster-whisper, with support for YouTube videos and optional summarization using Ollama.
 
 ## Features
 
 - Transcribe local audio/video files
 - Process YouTube videos (with subtitle extraction when available)
 - Automatic language detection
-- Multiple WhisperX model options
+- Multiple Whisper model options
 - Optional text summarization using Ollama
 - Modern web interface with Gradio
+- Docker support with CUDA
 - Configurable settings via config.ini
 
 ## Requirements
 
-- Python 3.8+
-- CUDA-compatible GPU (recommended)
-- FFmpeg installed on your system
-- Ollama (optional, for summarization)
+- Docker and Docker Compose
+- NVIDIA GPU with CUDA support
+- NVIDIA Container Toolkit (nvidia-docker2)
 
 ## Installation
 
@@ -27,33 +27,52 @@ git clone <repository-url>
 cd whisperapp
 ```
 
-2. Install the required packages:
+2. Install NVIDIA Container Toolkit (if not already installed):
 ```bash
-pip install -r requirements.txt
+# Add NVIDIA package repositories
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+
+# Install nvidia-docker2 package
+sudo apt-get update
+sudo apt-get install -y nvidia-docker2
+
+# Restart the Docker daemon
+sudo systemctl restart docker
 ```
 
-3. Install FFmpeg (if not already installed):
-- Ubuntu/Debian:
-```bash
-sudo apt update && sudo apt install ffmpeg
-```
-- macOS:
-```bash
-brew install ffmpeg
-```
-- Windows: Download from [FFmpeg website](https://ffmpeg.org/download.html)
-
-4. Copy the example configuration file:
+3. Copy the example configuration file:
 ```bash
 cp .env.example .env
 ```
 
-5. Edit the configuration files:
+4. Edit the configuration files:
 - `.env`: Set your environment variables
-- `config.ini`: Configure WhisperX, Ollama, and application settings
+- `config.ini`: Configure Whisper, Ollama, and application settings
+
+## Running with Docker
+
+1. Build and start the containers:
+```bash
+docker-compose up --build
+```
+
+2. Open your web browser and navigate to:
+```
+http://localhost:7860
+```
 
 ## Configuration
 
+### Environment Variables (.env)
+
+```ini
+# Server configuration
+SERVER_NAME=0.0.0.0
+SERVER_PORT=7860
+SHARE=true
+```
 
 ### Application Settings (config.ini)
 
@@ -61,9 +80,9 @@ cp .env.example .env
 [whisper]
 default_model = base
 device = cuda
-compute_type = float32
-batch_size = 16
-vad = true
+compute_type = float16
+beam_size = 5
+vad_filter = true
 
 [app]
 max_duration = 3600
@@ -84,29 +103,12 @@ default_model = mistral
 summarize_prompt = Please provide a comprehensive yet concise summary of the following text. Focus on the main points, key arguments, and important details while maintaining accuracy and completeness. Here's the text to summarize: 
 ```
 
-## Usage
-
-1. Start the application:
-```bash
-python app.py
-```
-
-2. Open your web browser and navigate to:
-```
-http://localhost:7860
-```
-
-3. Use the interface to:
-   - Upload and transcribe local audio/video files
-   - Process YouTube videos
-   - Generate summaries (if Ollama is configured)
-
 ## Features in Detail
 
 ### Local File Transcription
 - Supports various audio and video formats
 - Automatic language detection
-- Multiple WhisperX model options
+- Multiple Whisper model options
 - Optional summarization with Ollama
 
 ### YouTube Video Processing
@@ -130,6 +132,8 @@ http://localhost:7860
 - YouTube videos will first try to use available subtitles
 - If no subtitles are available, the video will be transcribed
 - Ollama summarization is optional and requires Ollama to be running
+- The application runs in a Docker container with CUDA support
+- Models are downloaded and cached in the `models` directory
 
 ## License
 

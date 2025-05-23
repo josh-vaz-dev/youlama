@@ -1,8 +1,9 @@
 [whisper]
 default_model = base
 device = cuda
-compute_type = float32
-batch_size = 16
+compute_type = float16
+beam_size = 5
+vad_filter = true
 
 [app]
 max_duration = 3600
