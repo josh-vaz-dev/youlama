@@ -187,7 +187,137 @@ def create_interface():
             "### A powerful tool for transcribing and summarizing audio/video content"
         )
 
-        with gr.Tabs(selected=1) as tabs:
+        with gr.Tabs() as tabs:
+            with gr.TabItem("YouTube"):
+                gr.Markdown(
+                    """
+                ### YouTube Video Processing
+                Enter a YouTube URL to transcribe the video or extract available subtitles.
+                - Supports youtube.com, youtu.be, and invidious URLs
+                - Automatically extracts subtitles if available
+                - Falls back to transcription if no subtitles found
+                - Optional summarization with Ollama
+                """
+                )
+
+                with gr.Row():
+                    with gr.Column():
+                        # YouTube input components
+                        youtube_url = gr.Textbox(
+                            label="YouTube URL",
+                            placeholder="Enter YouTube URL (youtube.com, youtu.be, or invidious)",
+                        )
+                        yt_model_dropdown = gr.Dropdown(
+                            choices=WHISPER_MODELS,
+                            value=DEFAULT_MODEL,
+                            label="Select Whisper Model",
+                        )
+                        yt_language_dropdown = gr.Dropdown(
+                            choices=["Auto-detect"] + AVAILABLE_LANGUAGES,
+                            value="Auto-detect",
+                            label="Language (optional)",
+                        )
+                        with gr.Group():
+                            yt_summarize_checkbox = gr.Checkbox(
+                                label="Generate Summary",
+                                value=False,
+                                interactive=OLLAMA_AVAILABLE,
+                            )
+                            yt_ollama_model_dropdown = gr.Dropdown(
+                                choices=(
+                                    OLLAMA_MODELS
+                                    if OLLAMA_AVAILABLE
+                                    else ["No models available"]
+                                ),
+                                value=(
+                                    DEFAULT_OLLAMA_MODEL if OLLAMA_AVAILABLE else None
+                                ),
+                                label="Ollama Model",
+                                interactive=OLLAMA_AVAILABLE,
+                            )
+
+                        # Add status bar
+                        yt_status = gr.Textbox(
+                            label="Status",
+                            value="Waiting for input...",
+                            interactive=False,
+                            elem_classes=["status-bar"],
+                        )
+
+                        yt_process_btn = gr.Button("Process Video", variant="primary")
+
+                    with gr.Column():
+                        # YouTube output components
+                        yt_output_text = gr.Textbox(
+                            label="Result", lines=10, max_lines=20
+                        )
+                        yt_detected_language = gr.Textbox(
+                            label="Detected Language", interactive=False
+                        )
+                        yt_source = gr.Textbox(label="Source", interactive=False)
+
+                # Add summary text box below the main output
+                if OLLAMA_AVAILABLE:
+                    yt_summary_text = gr.Textbox(
+                        label="Summary", lines=5, max_lines=10, value=""
+                    )
+
+                # Set up the event handler
+                def process_yt_with_summary(url, model, lang, summarize, ollama_model):
+                    try:
+                        # Update status for each step
+                        status = "Checking URL and fetching video information..."
+                        result = process_youtube_url(
+                            url, model, lang, summarize, ollama_model
+                        )
+
+                        if len(result) == 4:
+                            text, lang, source, summary = result
+                            if source == "Subtitles":
+                                status = "Processing subtitles..."
+                            else:
+                                status = "Transcribing video..."
+
+                            if summarize and summary:
+                                status = "Generating summary..."
+
+                            return (
+                                text,
+                                lang,
+                                source,
+                                summary if summary else "",
+                                "Processing complete!",
+                            )
+                        else:
+                            return (
+                                result[0],
+                                result[1],
+                                result[2],
+                                "",
+                                f"Error: {result[0]}",
+                            )
+                    except Exception as e:
+                        logger.error(f"Error in process_yt_with_summary: {str(e)}")
+                        return f"Error: {str(e)}", None, None, "", "Processing failed!"
+
+                yt_process_btn.click(
+                    fn=process_yt_with_summary,
+                    inputs=[
+                        youtube_url,
+                        yt_model_dropdown,
+                        yt_language_dropdown,
+                        yt_summarize_checkbox,
+                        yt_ollama_model_dropdown,
+                    ],
+                    outputs=[
+                        yt_output_text,
+                        yt_detected_language,
+                        yt_source,
+                        yt_summary_text if OLLAMA_AVAILABLE else gr.Textbox(),
+                        yt_status,
+                    ],
+                )
+
             with gr.TabItem("Local File"):
                 gr.Markdown(
                     """
@@ -310,138 +440,6 @@ def create_interface():
                         detected_language,
                         summary_text if OLLAMA_AVAILABLE else gr.Textbox(),
                         file_status,
-                    ],
-                )
-
-            with gr.TabItem("YouTube"):
-                gr.Markdown(
-                    """
-                ### YouTube Video Processing
-                Enter a YouTube URL to transcribe the video or extract available subtitles.
-                - Supports youtube.com, youtu.be, and invidious URLs
-                - Automatically extracts subtitles if available
-                - Falls back to transcription if no subtitles found
-                - Optional summarization with Ollama
-                """
-                )
-
-                with gr.Row():
-                    with gr.Column():
-                        # YouTube input components
-                        youtube_url = gr.Textbox(
-                            label="YouTube URL",
-                            placeholder="Enter YouTube URL (youtube.com, youtu.be, or invidious)",
-                        )
-                        yt_model_dropdown = gr.Dropdown(
-                            choices=WHISPER_MODELS,
-                            value=DEFAULT_MODEL,
-                            label="Select Whisper Model",
-                        )
-                        yt_language_dropdown = gr.Dropdown(
-                            choices=["Auto-detect"] + AVAILABLE_LANGUAGES,
-                            value="Auto-detect",
-                            label="Language (optional)",
-                        )
-                        with gr.Group():
-                            yt_summarize_checkbox = gr.Checkbox(
-                                label="Generate Summary",
-                                value=False,
-                                interactive=OLLAMA_AVAILABLE,
-                            )
-                            yt_ollama_model_dropdown = gr.Dropdown(
-                                choices=(
-                                    OLLAMA_MODELS
-                                    if OLLAMA_AVAILABLE
-                                    else ["No models available"]
-                                ),
-                                value=(
-                                    DEFAULT_OLLAMA_MODEL if OLLAMA_AVAILABLE else None
-                                ),
-                                label="Ollama Model",
-                                interactive=OLLAMA_AVAILABLE,
-                            )
-
-                        # Add status bar
-                        yt_status = gr.Textbox(
-                            label="Status",
-                            value="Waiting for input...",
-                            interactive=False,
-                            elem_classes=["status-bar"],
-                        )
-
-                        yt_process_btn = gr.Button("Process Video", variant="primary")
-
-                    with gr.Column():
-                        # YouTube output components
-                        yt_output_text = gr.Textbox(
-                            label="Result", lines=10, max_lines=20
-                        )
-                        yt_detected_language = gr.Textbox(
-                            label="Detected Language", interactive=False
-                        )
-                        yt_source = gr.Textbox(label="Source", interactive=False)
-
-                # Add summary text box below the main output
-                if OLLAMA_AVAILABLE:
-                    yt_summary_text = gr.Textbox(
-                        label="Summary", lines=5, max_lines=10, value=""
-                    )
-                
-                gr.Tabs.update(selected=1)
-
-                # Set up the event handler
-                def process_yt_with_summary(url, model, lang, summarize, ollama_model):
-                    try:
-                        # Update status for each step
-                        status = "Checking URL and fetching video information..."
-                        result = process_youtube_url(
-                            url, model, lang, summarize, ollama_model
-                        )
-
-                        if len(result) == 4:
-                            text, lang, source, summary = result
-                            if source == "Subtitles":
-                                status = "Processing subtitles..."
-                            else:
-                                status = "Transcribing video..."
-
-                            if summarize and summary:
-                                status = "Generating summary..."
-
-                            return (
-                                text,
-                                lang,
-                                source,
-                                summary if summary else "",
-                                "Processing complete!",
-                            )
-                        else:
-                            return (
-                                result[0],
-                                result[1],
-                                result[2],
-                                "",
-                                f"Error: {result[0]}",
-                            )
-                    except Exception as e:
-                        logger.error(f"Error in process_yt_with_summary: {str(e)}")
-                        return f"Error: {str(e)}", None, None, "", "Processing failed!"
-
-                yt_process_btn.click(
-                    fn=process_yt_with_summary,
-                    inputs=[
-                        youtube_url,
-                        yt_model_dropdown,
-                        yt_language_dropdown,
-                        yt_summarize_checkbox,
-                        yt_ollama_model_dropdown,
-                    ],
-                    outputs=[
-                        yt_output_text,
-                        yt_detected_language,
-                        yt_source,
-                        yt_summary_text if OLLAMA_AVAILABLE else gr.Textbox(),
-                        yt_status,
                     ],
                 )
 
