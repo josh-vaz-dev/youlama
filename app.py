@@ -28,12 +28,18 @@ config = load_config()
 
 # Whisper configuration
 DEFAULT_MODEL = config["whisper"]["default_model"]
-DEVICE = config["whisper"]["device"] if torch.cuda.is_available() else "cpu"
-COMPUTE_TYPE = config["whisper"]["compute_type"] if DEVICE == "cuda" else "float32"
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+COMPUTE_TYPE = "float32"  # Always use float32 for better compatibility
 BEAM_SIZE = config["whisper"].getint("beam_size")
 VAD_FILTER = config["whisper"].getboolean("vad_filter")
 
-logger.info(f"Initialized Whisper with device: {DEVICE}, compute type: {COMPUTE_TYPE}")
+# Log device and compute type
+logger.info(f"PyTorch CUDA available: {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    logger.info(f"CUDA device: {torch.cuda.get_device_name(0)}")
+    logger.info(f"CUDA version: {torch.version.cuda}")
+    logger.info(f"cuDNN version: {torch.backends.cudnn.version()}")
+logger.info(f"Using device: {DEVICE}, compute type: {COMPUTE_TYPE}")
 logger.info(
     f"Default model: {DEFAULT_MODEL}, beam size: {BEAM_SIZE}, VAD filter: {VAD_FILTER}"
 )
@@ -57,8 +63,23 @@ DEFAULT_OLLAMA_MODEL = ollama.get_default_model() if OLLAMA_AVAILABLE else None
 
 def load_model(model_name: str) -> WhisperModel:
     """Load the Whisper model with the specified configuration."""
-    logger.info(f"Loading Whisper model: {model_name}")
-    return WhisperModel(model_name, device=DEVICE, compute_type=COMPUTE_TYPE)
+    try:
+        logger.info(f"Loading Whisper model: {model_name}")
+        return WhisperModel(
+            model_name,
+            device=DEVICE,
+            compute_type=COMPUTE_TYPE,
+            download_root=os.path.join(os.path.dirname(__file__), "models"),
+        )
+    except Exception as e:
+        logger.error(f"Error loading model with CUDA: {str(e)}")
+        logger.info("Falling back to CPU")
+        return WhisperModel(
+            model_name,
+            device="cpu",
+            compute_type="float32",
+            download_root=os.path.join(os.path.dirname(__file__), "models"),
+        )
 
 
 def transcribe_audio(
