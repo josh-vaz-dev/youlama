@@ -187,7 +187,7 @@ def create_interface():
             "### A powerful tool for transcribing and summarizing audio/video content"
         )
 
-        with gr.Tabs(selected="YouTube") as tabs:  # Use tab name instead of index
+        with gr.Tabs() as tabs:
             with gr.TabItem("Local File"):
                 gr.Markdown(
                     """
@@ -313,7 +313,7 @@ def create_interface():
                     ],
                 )
 
-            with gr.TabItem("YouTube"):
+            with gr.TabItem("YouTube", selected=True):
                 gr.Markdown(
                     """
                 ### YouTube Video Processing
