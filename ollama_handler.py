@@ -49,7 +49,8 @@ class OllamaHandler:
         """Get list of available Ollama models."""
         try:
             models = self.client.list()
-            model_names = [model["name"] for model in models["models"]]
+            # The response structure is different, models are directly in the response
+            model_names = [model["model"] for model in models["models"]]
             logger.info(f"Found {len(model_names)} available models")
             return model_names
         except Exception as e:
