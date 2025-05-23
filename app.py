@@ -233,6 +233,15 @@ def create_interface():
                                 label="Ollama Model",
                                 interactive=OLLAMA_AVAILABLE,
                             )
+
+                        # Add status bar
+                        file_status = gr.Textbox(
+                            label="Status",
+                            value="Waiting for input...",
+                            interactive=False,
+                            elem_classes=["status-bar"],
+                        )
+
                         transcribe_btn = gr.Button("Transcribe", variant="primary")
 
                     with gr.Column():
@@ -245,20 +254,45 @@ def create_interface():
                         )
                         if OLLAMA_AVAILABLE:
                             summary_text = gr.Textbox(
-                                label="Summary", lines=5, max_lines=10, visible=False
+                                label="Summary", lines=5, max_lines=10, value=""
                             )
 
                 # Set up the event handler
                 def transcribe_with_summary(
                     audio, model, lang, summarize, ollama_model
                 ):
-                    result = transcribe_audio(
-                        audio, model, lang, summarize, ollama_model
-                    )
-                    if len(result) == 3:
-                        text, lang, summary = result
-                        return text, lang, summary if summary else ""
-                    return result[0], result[1], ""
+                    try:
+                        if not audio:
+                            yield "", None, "", "Please upload an audio file"
+                            return
+
+                        # Update status for each step
+                        yield "Loading model...", None, "", None
+                        model = load_model(model)
+
+                        yield "Transcribing audio...", None, "", None
+                        segments, info = model.transcribe(
+                            audio,
+                            language=lang if lang != "Auto-detect" else None,
+                            beam_size=BEAM_SIZE,
+                            vad_filter=VAD_FILTER,
+                        )
+
+                        # Combine all segments into one text
+                        full_text = " ".join([segment.text for segment in segments])
+
+                        if summarize and OLLAMA_AVAILABLE:
+                            yield f"Generating summary...", info.language, "", None
+                            summary = ollama.summarize(full_text, ollama_model)
+                            yield full_text, info.language, (
+                                summary if summary else ""
+                            ), "Processing complete!"
+                        else:
+                            yield full_text, info.language, "", "Processing complete!"
+
+                    except Exception as e:
+                        logger.error(f"Error in transcribe_with_summary: {str(e)}")
+                        yield f"Error: {str(e)}", None, "", "Processing failed!"
 
                 transcribe_btn.click(
                     fn=transcribe_with_summary,
@@ -273,6 +307,7 @@ def create_interface():
                         output_text,
                         detected_language,
                         summary_text if OLLAMA_AVAILABLE else gr.Textbox(),
+                        file_status,
                     ],
                 )
 
