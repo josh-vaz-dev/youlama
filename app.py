@@ -232,13 +232,20 @@ def create_interface():
                                         gr.Warning(
                                             "Ollama is not available. Please check your Ollama server."
                                         )
-                                        return False, False
-                                    return checked, checked
+                                        return False
+                                    return checked
+
+                                def update_model_visibility(visible):
+                                    return gr.Dropdown.update(visible=visible)
 
                                 summarize_checkbox.change(
                                     fn=toggle_summary,
                                     inputs=[summarize_checkbox],
-                                    outputs=[summarize_checkbox, ollama_model_dropdown],
+                                    outputs=[summarize_checkbox],
+                                ).then(
+                                    fn=update_model_visibility,
+                                    inputs=[summarize_checkbox],
+                                    outputs=[ollama_model_dropdown],
                                 )
                         transcribe_btn = gr.Button("Transcribe", variant="primary")
 
@@ -337,16 +344,20 @@ def create_interface():
                                         gr.Warning(
                                             "Ollama is not available. Please check your Ollama server."
                                         )
-                                        return False, False
-                                    return checked, checked
+                                        return False
+                                    return checked
+
+                                def update_yt_model_visibility(visible):
+                                    return gr.Dropdown.update(visible=visible)
 
                                 yt_summarize_checkbox.change(
                                     fn=toggle_yt_summary,
                                     inputs=[yt_summarize_checkbox],
-                                    outputs=[
-                                        yt_summarize_checkbox,
-                                        yt_ollama_model_dropdown,
-                                    ],
+                                    outputs=[yt_summarize_checkbox],
+                                ).then(
+                                    fn=update_yt_model_visibility,
+                                    inputs=[yt_summarize_checkbox],
+                                    outputs=[yt_ollama_model_dropdown],
                                 )
                         yt_process_btn = gr.Button("Process Video", variant="primary")
 
