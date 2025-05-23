@@ -236,7 +236,11 @@ def create_interface():
                                     return checked
 
                                 def update_model_visibility(visible):
-                                    return gr.Dropdown.update(visible=visible)
+                                    if visible:
+                                        return gr.Dropdown.update(
+                                            visible=True, value=DEFAULT_OLLAMA_MODEL
+                                        )
+                                    return gr.Dropdown.update(visible=False)
 
                                 summarize_checkbox.change(
                                     fn=toggle_summary,
@@ -348,7 +352,11 @@ def create_interface():
                                     return checked
 
                                 def update_yt_model_visibility(visible):
-                                    return gr.Dropdown.update(visible=visible)
+                                    if visible:
+                                        return gr.Dropdown.update(
+                                            visible=True, value=DEFAULT_OLLAMA_MODEL
+                                        )
+                                    return gr.Dropdown.update(visible=False)
 
                                 yt_summarize_checkbox.change(
                                     fn=toggle_yt_summary,
