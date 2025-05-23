@@ -18,6 +18,7 @@ A web application for transcribing audio and video files using faster-whisper, w
 - Docker and Docker Compose
 - NVIDIA GPU with CUDA support
 - NVIDIA Container Toolkit (nvidia-docker2)
+- Ollama installed locally (optional, for summarization)
 
 ## Installation
 
@@ -42,23 +43,33 @@ sudo apt-get install -y nvidia-docker2
 sudo systemctl restart docker
 ```
 
-3. Copy the example configuration file:
+3. Install Ollama locally (optional, for summarization):
+```bash
+curl https://ollama.ai/install.sh | sh
+```
+
+4. Copy the example configuration file:
 ```bash
 cp .env.example .env
 ```
 
-4. Edit the configuration files:
+5. Edit the configuration files:
 - `.env`: Set your environment variables
 - `config.ini`: Configure Whisper, Ollama, and application settings
 
-## Running with Docker
+## Running the Application
 
-1. Build and start the containers:
+1. Start Ollama locally (if you want to use summarization):
+```bash
+ollama serve
+```
+
+2. Build and start the Whisper app container:
 ```bash
 docker-compose up --build
 ```
 
-2. Open your web browser and navigate to:
+3. Open your web browser and navigate to:
 ```
 http://localhost:7860
 ```
@@ -98,7 +109,7 @@ available_languages = en,es,fr,de,it,pt,nl,ja,ko,zh
 
 [ollama]
 enabled = false
-url = http://localhost:11434
+url = http://host.docker.internal:11434
 default_model = mistral
 summarize_prompt = Please provide a comprehensive yet concise summary of the following text. Focus on the main points, key arguments, and important details while maintaining accuracy and completeness. Here's the text to summarize: 
 ```
@@ -118,7 +129,7 @@ summarize_prompt = Please provide a comprehensive yet concise summary of the fol
 - Optional summarization with Ollama
 
 ### Summarization
-- Uses Ollama for text summarization
+- Uses locally running Ollama for text summarization
 - Configurable model selection
 - Customizable prompt
 - Available for both local files and YouTube videos
@@ -131,9 +142,10 @@ summarize_prompt = Please provide a comprehensive yet concise summary of the fol
 - Maximum audio duration is configurable (default: 60 minutes)
 - YouTube videos will first try to use available subtitles
 - If no subtitles are available, the video will be transcribed
-- Ollama summarization is optional and requires Ollama to be running
+- Ollama summarization is optional and requires Ollama to be running locally
 - The application runs in a Docker container with CUDA support
 - Models are downloaded and cached in the `models` directory
+- The container connects to the local Ollama instance using host.docker.internal
 
 ## License
 

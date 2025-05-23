@@ -10,6 +10,7 @@ services:
       - ./models:/app/models
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
+      - OLLAMA_HOST=host.docker.internal
     deploy:
       resources:
         reservations:
@@ -17,22 +18,8 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-    depends_on:
-      - ollama
-
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   ollama_data: 

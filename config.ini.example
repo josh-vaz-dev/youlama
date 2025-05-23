@@ -19,7 +19,7 @@ available_languages = en,es,fr,de,it,pt,nl,ja,ko,zh
 
 [ollama]
 enabled = false
-url = http://localhost:11434
+url = http://host.docker.internal:11434
 default_model = mistral
 summarize_prompt = Your mission is to create a **detailed and comprehensive summary**.
     
