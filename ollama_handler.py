@@ -69,21 +69,50 @@ class OllamaHandler:
             logger.error(f"Error fetching Ollama models: {str(e)}")
             return []
 
+    def validate_model(self, model_name: str) -> tuple[bool, Optional[str]]:
+        """Validate if a model exists and return the first available model if not."""
+        available_models = self.get_available_models()
+        if not available_models:
+            return False, None
+
+        if model_name in available_models:
+            return True, model_name
+
+        logger.warning(
+            f"Model {model_name} not found in available models. Using first available model: {available_models[0]}"
+        )
+        return True, available_models[0]
+
+    def get_default_model(self) -> Optional[str]:
+        """Get the default model, falling back to first available if default is not found."""
+        if not self.is_available():
+            return None
+
+        is_valid, model = self.validate_model(self.default_model)
+        if is_valid:
+            return model
+        return None
+
     def summarize(self, text: str, model: Optional[str] = None) -> Optional[str]:
         """Summarize text using Ollama."""
         if not self.is_available():
             logger.warning("Attempted to summarize with Ollama unavailable")
             return None
 
-        model = model or self.default_model
+        # Validate and get the correct model
+        is_valid, valid_model = self.validate_model(model or self.default_model)
+        if not is_valid:
+            logger.error("No valid Ollama models available")
+            return None
+
         prompt = f"{self.prompt}\n\n{text}"
-        logger.info(f"Generating summary using model: {model}")
+        logger.info(f"Generating summary using model: {valid_model}")
         logger.info(f"Input text length: {len(text)} characters")
 
         try:
             response = requests.post(
                 f"{self.url}/api/generate",
-                json={"model": model, "prompt": prompt, "stream": False},
+                json={"model": valid_model, "prompt": prompt, "stream": False},
             )
 
             if response.status_code == 200:

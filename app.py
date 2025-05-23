@@ -52,6 +52,7 @@ AVAILABLE_LANGUAGES = config["languages"]["available_languages"].split(",")
 ollama = OllamaHandler()
 OLLAMA_AVAILABLE = ollama.is_available()
 OLLAMA_MODELS = ollama.get_available_models() if OLLAMA_AVAILABLE else []
+DEFAULT_OLLAMA_MODEL = ollama.get_default_model() if OLLAMA_AVAILABLE else None
 
 
 def load_model(model_name: str) -> WhisperModel:
@@ -221,14 +222,23 @@ def create_interface():
                                 )
                                 ollama_model_dropdown = gr.Dropdown(
                                     choices=OLLAMA_MODELS,
-                                    value=OLLAMA_MODELS[0] if OLLAMA_MODELS else None,
+                                    value=DEFAULT_OLLAMA_MODEL,
                                     label="Ollama Model",
                                     visible=False,
                                 )
+
+                                def toggle_summary(checked):
+                                    if checked and not ollama.is_available():
+                                        gr.Warning(
+                                            "Ollama is not available. Please check your Ollama server."
+                                        )
+                                        return {"value": False, "visible": False}
+                                    return {"value": checked, "visible": checked}
+
                                 summarize_checkbox.change(
-                                    fn=lambda x: {"visible": x},
+                                    fn=toggle_summary,
                                     inputs=[summarize_checkbox],
-                                    outputs=[ollama_model_dropdown],
+                                    outputs=[summarize_checkbox, ollama_model_dropdown],
                                 )
                         transcribe_btn = gr.Button("Transcribe", variant="primary")
 
@@ -317,14 +327,26 @@ def create_interface():
                                 )
                                 yt_ollama_model_dropdown = gr.Dropdown(
                                     choices=OLLAMA_MODELS,
-                                    value=OLLAMA_MODELS[0] if OLLAMA_MODELS else None,
+                                    value=DEFAULT_OLLAMA_MODEL,
                                     label="Ollama Model",
                                     visible=False,
                                 )
+
+                                def toggle_yt_summary(checked):
+                                    if checked and not ollama.is_available():
+                                        gr.Warning(
+                                            "Ollama is not available. Please check your Ollama server."
+                                        )
+                                        return {"value": False, "visible": False}
+                                    return {"value": checked, "visible": checked}
+
                                 yt_summarize_checkbox.change(
-                                    fn=lambda x: {"visible": x},
+                                    fn=toggle_yt_summary,
                                     inputs=[yt_summarize_checkbox],
-                                    outputs=[yt_ollama_model_dropdown],
+                                    outputs=[
+                                        yt_summarize_checkbox,
+                                        yt_ollama_model_dropdown,
+                                    ],
                                 )
                         yt_process_btn = gr.Button("Process Video", variant="primary")
 
