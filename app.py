@@ -386,6 +386,8 @@ def create_interface():
                     yt_summary_text = gr.Textbox(
                         label="Summary", lines=5, max_lines=10, value=""
                     )
+                
+                gr.Tabs.update(selected=1)
 
                 # Set up the event handler
                 def process_yt_with_summary(url, model, lang, summarize, ollama_model):
