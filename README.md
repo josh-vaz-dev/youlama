@@ -1,17 +1,17 @@
-# Audio/Video Transcription Web App
+# YouLama
 
-A web application for transcribing audio and video files using faster-whisper, with support for YouTube videos and optional summarization using Ollama.
+A powerful web application for transcribing and summarizing YouTube videos and local media files using faster-whisper and Ollama.
 
 ## Features
 
-- Transcribe local audio/video files
-- Process YouTube videos (with subtitle extraction when available)
-- Automatic language detection
-- Multiple Whisper model options
-- Optional text summarization using Ollama
-- Modern web interface with Gradio
-- Docker support with CUDA
-- Configurable settings via config.ini
+- 🎥 YouTube video transcription with subtitle extraction
+- 🎙️ Local audio/video file transcription
+- 🤖 Automatic language detection
+- 📝 Multiple Whisper model options
+- 📚 AI-powered text summarization using Ollama
+- 🎨 Modern web interface with Gradio
+- 🐳 Docker support with CUDA
+- ⚙️ Configurable settings via config.ini
 
 ## Requirements
 
@@ -25,7 +25,7 @@ A web application for transcribing audio and video files using faster-whisper, w
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd whisperapp
+cd youlama
 ```
 
 2. Install NVIDIA Container Toolkit (if not already installed):
@@ -64,7 +64,7 @@ cp .env.example .env
 ollama serve
 ```
 
-2. Build and start the Whisper app container:
+2. Build and start the YouLama container:
 ```bash
 docker-compose up --build
 ```
@@ -116,25 +116,25 @@ summarize_prompt = Please provide a comprehensive yet concise summary of the fol
 
 ## Features in Detail
 
-### Local File Transcription
-- Supports various audio and video formats
-- Automatic language detection
-- Multiple Whisper model options
-- Optional summarization with Ollama
-
 ### YouTube Video Processing
 - Supports youtube.com, youtu.be, and invidious URLs
 - Automatically extracts subtitles if available
 - Falls back to transcription if no subtitles found
-- Optional summarization with Ollama
+- Optional AI-powered summarization with Ollama
 
-### Summarization
+### Local File Transcription
+- Supports various audio and video formats
+- Automatic language detection
+- Multiple Whisper model options
+- Optional AI-powered summarization with Ollama
+
+### AI Summarization
 - Uses locally running Ollama for text summarization
 - Configurable model selection
 - Customizable prompt
 - Available for both local files and YouTube videos
 
-## Notes
+## Tips
 
 - For better accuracy, use larger models (medium, large)
 - Processing time increases with model size

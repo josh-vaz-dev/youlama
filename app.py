@@ -238,10 +238,8 @@ def process_youtube_url(
 def create_interface():
     """Create and return the Gradio interface."""
     with gr.Blocks(theme=gr.themes.Soft()) as app:
-        gr.Markdown("# 🎙️ Audio/Video Transcription with Whisper")
-        gr.Markdown(
-            "### A powerful tool for transcribing and summarizing audio/video content"
-        )
+        gr.Markdown("# 🎥 YouLama")
+        gr.Markdown("### AI-powered YouTube video transcription and summarization")
 
         with gr.Tabs() as tabs:
             with gr.TabItem("YouTube"):
@@ -252,7 +250,7 @@ def create_interface():
                 - Supports youtube.com, youtu.be, and invidious URLs
                 - Automatically extracts subtitles if available
                 - Falls back to transcription if no subtitles found
-                - Optional summarization with Ollama
+                - Optional AI-powered summarization with Ollama
                 """
                 )
 
@@ -275,7 +273,7 @@ def create_interface():
                         )
                         with gr.Group():
                             yt_summarize_checkbox = gr.Checkbox(
-                                label="Generate Summary",
+                                label="Generate AI Summary",
                                 value=False,
                                 interactive=OLLAMA_AVAILABLE,
                             )
@@ -305,7 +303,7 @@ def create_interface():
                     with gr.Column():
                         # YouTube output components
                         yt_output_text = gr.Textbox(
-                            label="Result", lines=10, max_lines=20
+                            label="Transcription", lines=10, max_lines=20
                         )
                         yt_detected_language = gr.Textbox(
                             label="Detected Language", interactive=False
@@ -315,7 +313,7 @@ def create_interface():
                 # Add summary text box below the main output
                 if OLLAMA_AVAILABLE:
                     yt_summary_text = gr.Textbox(
-                        label="Summary", lines=5, max_lines=10, value=""
+                        label="AI Summary", lines=5, max_lines=10, value=""
                     )
 
                 # Set up the event handler
@@ -335,7 +333,7 @@ def create_interface():
                                 status = "Transcribing video..."
 
                             if summarize and summary:
-                                status = "Generating summary..."
+                                status = "Generating AI summary..."
 
                             return (
                                 text,
@@ -381,7 +379,7 @@ def create_interface():
                 Upload an audio or video file to transcribe it using Whisper.
                 - Supports various audio and video formats
                 - Automatic language detection
-                - Optional summarization with Ollama
+                - Optional AI-powered summarization with Ollama
                 """
                 )
 
@@ -403,7 +401,7 @@ def create_interface():
                         )
                         with gr.Group():
                             summarize_checkbox = gr.Checkbox(
-                                label="Generate Summary",
+                                label="Generate AI Summary",
                                 value=False,
                                 interactive=OLLAMA_AVAILABLE,
                             )
@@ -440,7 +438,7 @@ def create_interface():
                         )
                         if OLLAMA_AVAILABLE:
                             summary_text = gr.Textbox(
-                                label="Summary", lines=5, max_lines=10, value=""
+                                label="AI Summary", lines=5, max_lines=10, value=""
                             )
 
                 # Set up the event handler
@@ -467,7 +465,7 @@ def create_interface():
                         full_text = " ".join([segment.text for segment in segments])
 
                         if summarize and OLLAMA_AVAILABLE:
-                            status = "Generating summary..."
+                            status = "Generating AI summary..."
                             summary = ollama.summarize(full_text, ollama_model)
                             return (
                                 full_text,
@@ -514,7 +512,7 @@ def create_interface():
         - Maximum audio duration is {MAX_DURATION // 60} minutes
         - YouTube videos will first try to use available subtitles
         - If no subtitles are available, the video will be transcribed
-        {"- Ollama summarization is available for both local files and YouTube videos" if OLLAMA_AVAILABLE else "- Ollama summarization is currently unavailable"}
+        {"- AI-powered summarization is available for both local files and YouTube videos" if OLLAMA_AVAILABLE else "- AI-powered summarization is currently unavailable"}
         
         ### Status:
         - Device: {DEVICE}
