@@ -10,6 +10,7 @@ A user-friendly web application for transcribing audio and video files using Ope
 - 📱 Responsive and modern UI
 - 🔄 Multiple model options (tiny to large-v3)
 - ⚙️ Configurable settings via config.ini
+- 📺 YouTube video support with subtitle extraction
 
 ## Requirements
 
@@ -71,9 +72,22 @@ python app.py
 
 2. Open your web browser and navigate to `http://localhost:7860`
 
-3. Upload an audio or video file and select your preferred model and language settings
+3. Choose between two tabs:
+   - **Local File**: Upload and transcribe audio/video files
+   - **YouTube**: Process YouTube videos with subtitle extraction
 
-4. Click "Transcribe" and wait for the results
+### Local File Tab
+1. Upload an audio or video file
+2. Select your preferred model and language settings
+3. Click "Transcribe" and wait for the results
+
+### YouTube Tab
+1. Enter a YouTube URL (supports youtube.com, youtu.be, and invidious URLs)
+2. Select your preferred model and language settings
+3. Click "Process Video"
+4. The app will:
+   - First try to extract available subtitles
+   - If no subtitles are available, download and transcribe the video
 
 ## Model Options
 
@@ -90,6 +104,8 @@ python app.py
 - GPU is recommended for faster processing
 - Maximum audio duration is configurable in config.ini
 - Use uv for faster package installation and dependency resolution
+- YouTube videos will first try to use available subtitles
+- If no subtitles are available, the video will be transcribed
 
 ## License
 
