@@ -88,10 +88,18 @@ class OllamaHandler:
         if not self.is_available():
             return None
 
-        is_valid, model = self.validate_model(self.default_model)
-        if is_valid:
-            return model
-        return None
+        available_models = self.get_available_models()
+        if not available_models:
+            return None
+
+        if self.default_model in available_models:
+            logger.info(f"Using configured default model: {self.default_model}")
+            return self.default_model
+
+        logger.warning(
+            f"Configured model '{self.default_model}' not found in available models. Using first available model: {available_models[0]}"
+        )
+        return available_models[0]
 
     def summarize(self, text: str, model: Optional[str] = None) -> Optional[str]:
         """Summarize text using Ollama."""
