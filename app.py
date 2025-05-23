@@ -215,42 +215,24 @@ def create_interface():
                             value="Auto-detect",
                             label="Language (optional)",
                         )
-                        if OLLAMA_AVAILABLE:
-                            with gr.Group():
-                                summarize_checkbox = gr.Checkbox(
-                                    label="Generate Summary", value=False
-                                )
-                                ollama_model_dropdown = gr.Dropdown(
-                                    choices=OLLAMA_MODELS,
-                                    value=DEFAULT_OLLAMA_MODEL,
-                                    label="Ollama Model",
-                                    visible=False,
-                                )
-
-                                def toggle_summary(checked):
-                                    if checked and not ollama.is_available():
-                                        gr.Warning(
-                                            "Ollama is not available. Please check your Ollama server."
-                                        )
-                                        return False
-                                    return checked
-
-                                def update_model_visibility(visible):
-                                    if visible:
-                                        return gr.Dropdown.update(
-                                            visible=True, value=DEFAULT_OLLAMA_MODEL
-                                        )
-                                    return gr.Dropdown.update(visible=False)
-
-                                summarize_checkbox.change(
-                                    fn=toggle_summary,
-                                    inputs=[summarize_checkbox],
-                                    outputs=[summarize_checkbox],
-                                ).then(
-                                    fn=update_model_visibility,
-                                    inputs=[summarize_checkbox],
-                                    outputs=[ollama_model_dropdown],
-                                )
+                        with gr.Group():
+                            summarize_checkbox = gr.Checkbox(
+                                label="Generate Summary",
+                                value=False,
+                                interactive=OLLAMA_AVAILABLE,
+                            )
+                            ollama_model_dropdown = gr.Dropdown(
+                                choices=(
+                                    OLLAMA_MODELS
+                                    if OLLAMA_AVAILABLE
+                                    else ["No models available"]
+                                ),
+                                value=(
+                                    DEFAULT_OLLAMA_MODEL if OLLAMA_AVAILABLE else None
+                                ),
+                                label="Ollama Model",
+                                interactive=OLLAMA_AVAILABLE,
+                            )
                         transcribe_btn = gr.Button("Transcribe", variant="primary")
 
                     with gr.Column():
@@ -284,16 +266,8 @@ def create_interface():
                         audio_input,
                         model_dropdown,
                         language_dropdown,
-                        (
-                            summarize_checkbox
-                            if OLLAMA_AVAILABLE
-                            else gr.Checkbox(value=False)
-                        ),
-                        (
-                            ollama_model_dropdown
-                            if OLLAMA_AVAILABLE
-                            else gr.Dropdown(value=None)
-                        ),
+                        summarize_checkbox,
+                        ollama_model_dropdown,
                     ],
                     outputs=[
                         output_text,
@@ -331,42 +305,24 @@ def create_interface():
                             value="Auto-detect",
                             label="Language (optional)",
                         )
-                        if OLLAMA_AVAILABLE:
-                            with gr.Group():
-                                yt_summarize_checkbox = gr.Checkbox(
-                                    label="Generate Summary", value=False
-                                )
-                                yt_ollama_model_dropdown = gr.Dropdown(
-                                    choices=OLLAMA_MODELS,
-                                    value=DEFAULT_OLLAMA_MODEL,
-                                    label="Ollama Model",
-                                    visible=False,
-                                )
-
-                                def toggle_yt_summary(checked):
-                                    if checked and not ollama.is_available():
-                                        gr.Warning(
-                                            "Ollama is not available. Please check your Ollama server."
-                                        )
-                                        return False
-                                    return checked
-
-                                def update_yt_model_visibility(visible):
-                                    if visible:
-                                        return gr.Dropdown.update(
-                                            visible=True, value=DEFAULT_OLLAMA_MODEL
-                                        )
-                                    return gr.Dropdown.update(visible=False)
-
-                                yt_summarize_checkbox.change(
-                                    fn=toggle_yt_summary,
-                                    inputs=[yt_summarize_checkbox],
-                                    outputs=[yt_summarize_checkbox],
-                                ).then(
-                                    fn=update_yt_model_visibility,
-                                    inputs=[yt_summarize_checkbox],
-                                    outputs=[yt_ollama_model_dropdown],
-                                )
+                        with gr.Group():
+                            yt_summarize_checkbox = gr.Checkbox(
+                                label="Generate Summary",
+                                value=False,
+                                interactive=OLLAMA_AVAILABLE,
+                            )
+                            yt_ollama_model_dropdown = gr.Dropdown(
+                                choices=(
+                                    OLLAMA_MODELS
+                                    if OLLAMA_AVAILABLE
+                                    else ["No models available"]
+                                ),
+                                value=(
+                                    DEFAULT_OLLAMA_MODEL if OLLAMA_AVAILABLE else None
+                                ),
+                                label="Ollama Model",
+                                interactive=OLLAMA_AVAILABLE,
+                            )
                         yt_process_btn = gr.Button("Process Video", variant="primary")
 
                     with gr.Column():
@@ -399,16 +355,8 @@ def create_interface():
                         youtube_url,
                         yt_model_dropdown,
                         yt_language_dropdown,
-                        (
-                            yt_summarize_checkbox
-                            if OLLAMA_AVAILABLE
-                            else gr.Checkbox(value=False)
-                        ),
-                        (
-                            yt_ollama_model_dropdown
-                            if OLLAMA_AVAILABLE
-                            else gr.Dropdown(value=None)
-                        ),
+                        yt_summarize_checkbox,
+                        yt_ollama_model_dropdown,
                     ],
                     outputs=[
                         yt_output_text,
@@ -428,7 +376,7 @@ def create_interface():
         - Maximum audio duration is {MAX_DURATION // 60} minutes
         - YouTube videos will first try to use available subtitles
         - If no subtitles are available, the video will be transcribed
-        {"- Ollama summarization is available for both local files and YouTube videos" if OLLAMA_AVAILABLE else ""}
+        {"- Ollama summarization is available for both local files and YouTube videos" if OLLAMA_AVAILABLE else "- Ollama summarization is currently unavailable"}
         
         ### Status:
         - Device: {DEVICE}
