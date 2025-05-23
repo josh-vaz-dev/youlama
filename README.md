@@ -1,67 +1,96 @@
-# Whisper Transcription Web App
+# Audio/Video Transcription Web App
 
-A user-friendly web application for transcribing audio and video files using OpenAI's Whisper model, powered by Gradio and faster-whisper.
+A web application for transcribing audio and video files using WhisperX, with support for YouTube videos and optional summarization using Ollama.
 
 ## Features
 
-- 🎙️ Transcribe audio and video files
-- 🚀 GPU acceleration support
-- 🌐 Multiple language support
-- 📱 Responsive and modern UI
-- 🔄 Multiple model options (tiny to large-v3)
-- ⚙️ Configurable settings via config.ini
-- 📺 YouTube video support with subtitle extraction
+- Transcribe local audio/video files
+- Process YouTube videos (with subtitle extraction when available)
+- Automatic language detection
+- Multiple WhisperX model options
+- Optional text summarization using Ollama
+- Modern web interface with Gradio
+- Configurable settings via config.ini
 
 ## Requirements
 
-- Python 3.10+
-- CUDA-capable GPU (recommended)
-- FFmpeg (for audio/video processing)
-- uv package manager
+- Python 3.8+
+- CUDA-compatible GPU (recommended)
+- FFmpeg installed on your system
+- Ollama (optional, for summarization)
 
 ## Installation
 
-1. Clone this repository:
+1. Clone the repository:
 ```bash
 git clone <repository-url>
 cd whisperapp
 ```
 
-2. Install uv (if you just pip install you might break your environment):
+2. Install the required packages:
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
+pip install -r requirements.txt
 ```
 
-3. Create a venv with uv:
+3. Install FFmpeg (if not already installed):
+- Ubuntu/Debian:
 ```bash
-uv venv --python=3.10
+sudo apt update && sudo apt install ffmpeg
+```
+- macOS:
+```bash
+brew install ffmpeg
+```
+- Windows: Download from [FFmpeg website](https://ffmpeg.org/download.html)
+
+4. Copy the example configuration file:
+```bash
+cp .env.example .env
 ```
 
-4. Install the required packages using uv:
-```bash
-uv pip install -r requirements.txt
-```
+5. Edit the configuration files:
+- `.env`: Set your environment variables
+- `config.ini`: Configure WhisperX, Ollama, and application settings
 
 ## Configuration
 
-The application can be configured through the `config.ini` file. Here are the available settings:
+### Environment Variables (.env)
 
-### Whisper Settings
-- `default_model`: Default Whisper model to use
-- `device`: Device to use (cuda/cpu)
-- `compute_type`: Computation type (float16/float32)
-- `beam_size`: Beam size for transcription
-- `vad_filter`: Enable/disable voice activity detection
+```ini
+# Server configuration
+SERVER_NAME=0.0.0.0
+SERVER_PORT=7860
+SHARE=true
+```
 
-### App Settings
-- `max_duration`: Maximum audio duration in seconds
-- `server_name`: Server hostname
-- `server_port`: Server port
-- `share`: Enable/disable public sharing
+### Application Settings (config.ini)
 
-### Models and Languages
-- `available_models`: Comma-separated list of available models
-- `available_languages`: Comma-separated list of supported languages
+```ini
+[whisper]
+default_model = base
+device = cuda
+compute_type = float32
+batch_size = 16
+vad = true
+
+[app]
+max_duration = 3600
+server_name = 0.0.0.0
+server_port = 7860
+share = true
+
+[models]
+available_models = tiny,base,small,medium,large-v1,large-v2,large-v3
+
+[languages]
+available_languages = en,es,fr,de,it,pt,nl,ja,ko,zh
+
+[ollama]
+enabled = false
+url = http://localhost:11434
+default_model = mistral
+summarize_prompt = Please provide a comprehensive yet concise summary of the following text. Focus on the main points, key arguments, and important details while maintaining accuracy and completeness. Here's the text to summarize: 
+```
 
 ## Usage
 
@@ -70,43 +99,46 @@ The application can be configured through the `config.ini` file. Here are the av
 python app.py
 ```
 
-2. Open your web browser and navigate to `http://localhost:7860`
+2. Open your web browser and navigate to:
+```
+http://localhost:7860
+```
 
-3. Choose between two tabs:
-   - **Local File**: Upload and transcribe audio/video files
-   - **YouTube**: Process YouTube videos with subtitle extraction
+3. Use the interface to:
+   - Upload and transcribe local audio/video files
+   - Process YouTube videos
+   - Generate summaries (if Ollama is configured)
 
-### Local File Tab
-1. Upload an audio or video file
-2. Select your preferred model and language settings
-3. Click "Transcribe" and wait for the results
+## Features in Detail
 
-### YouTube Tab
-1. Enter a YouTube URL (supports youtube.com, youtu.be, and invidious URLs)
-2. Select your preferred model and language settings
-3. Click "Process Video"
-4. The app will:
-   - First try to extract available subtitles
-   - If no subtitles are available, download and transcribe the video
+### Local File Transcription
+- Supports various audio and video formats
+- Automatic language detection
+- Multiple WhisperX model options
+- Optional summarization with Ollama
 
-## Model Options
+### YouTube Video Processing
+- Supports youtube.com, youtu.be, and invidious URLs
+- Automatically extracts subtitles if available
+- Falls back to transcription if no subtitles found
+- Optional summarization with Ollama
 
-- tiny: Fastest, lowest accuracy
-- base: Good balance of speed and accuracy
-- small: Better accuracy, moderate speed
-- medium: High accuracy, slower
-- large-v1/v2/v3: Highest accuracy, slowest
+### Summarization
+- Uses Ollama for text summarization
+- Configurable model selection
+- Customizable prompt
+- Available for both local files and YouTube videos
 
-## Tips
+## Notes
 
 - For better accuracy, use larger models (medium, large)
 - Processing time increases with model size
 - GPU is recommended for faster processing
-- Maximum audio duration is configurable in config.ini
-- Use uv for faster package installation and dependency resolution
+- Maximum audio duration is configurable (default: 60 minutes)
 - YouTube videos will first try to use available subtitles
 - If no subtitles are available, the video will be transcribed
+- Ollama summarization is optional and requires Ollama to be running
 
 ## License
 
-MIT License 
+This project is licensed under the MIT License - see the LICENSE file for details. 

@@ -139,8 +139,10 @@ def transcribe_audio(
         result = model.transcribe(
             audio_file,
             language=language if language != "Auto-detect" else None,
-            beam_size=BEAM_SIZE,
-            vad_filter=VAD_FILTER,
+            batch_size=16,  # WhisperX uses batch_size instead of beam_size
+            vad=(
+                True if VAD_FILTER else False
+            ),  # WhisperX uses vad instead of vad_filter
         )
 
         # Get the full text with timestamps
@@ -459,8 +461,10 @@ def create_interface():
                         result = model.transcribe(
                             audio,
                             language=lang if lang != "Auto-detect" else None,
-                            beam_size=BEAM_SIZE,
-                            vad_filter=VAD_FILTER,
+                            batch_size=16,  # WhisperX uses batch_size instead of beam_size
+                            vad=(
+                                True if VAD_FILTER else False
+                            ),  # WhisperX uses vad instead of vad_filter
                         )
 
                         # Get the full text with timestamps
