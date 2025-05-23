@@ -8,11 +8,7 @@ from urllib.parse import urlparse, parse_qs
 
 def is_youtube_url(url: str) -> bool:
     """Check if the URL is a valid YouTube URL."""
-    youtube_regex = (
-        r"(https?://)?(www\.)?"
-        "(youtube|youtu|youtube-nocookie)\.(com|be)/"
-        "(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})"
-    )
+    youtube_regex = r"(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})"
     return bool(re.match(youtube_regex, url))
 
 
