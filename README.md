@@ -11,7 +11,7 @@
 
 - 🎥 **High-Quality Transcription**: Whisper large-v3 with enhanced quality settings
 - 🚀 **Multi-Backend AI**: vLLM (primary) with Ollama fallback for summarization
-- 🌟 **State-of-Art Models**: Qwen2.5-14B-Instruct for best summarization quality
+- 🌟 **State-of-Art Models**: Qwen3-8B with thinking mode for best summarization quality
 - 📺 **YouTube Support**: Auto-extract subtitles or transcribe audio
 - 🔒 **Security Hardened**: Non-root containers, localhost binding, capability dropping
 - ⚡ **RTX 4090 Optimized**: CUDA 12.3, Flash Attention 2, optimal memory settings
@@ -20,16 +20,21 @@
 ## Architecture
 
 ```
-┌─────────────────┐     ┌──────────────┐     ┌─────────────┐
-│   Gradio Web    │────▶│   Whisper    │────▶│    vLLM     │
-│   Interface     │     │  large-v3    │     │ Qwen2.5-14B │
-└─────────────────┘     └──────────────┘     └─────────────┘
-        │                                            │
-        │                                            ▼
-        │                                    ┌─────────────┐
-        └────────────────────────────────────│   Ollama    │
-                                             │  (Fallback) │
-                                             └─────────────┘
+┌─────────────────┐     ┌──────────────┐     ┌─────────────────────┐
+│   Gradio Web    │────▶│   Whisper    │────▶│  SHARED vLLM Server │
+│   Interface     │     │  large-v3    │     │     Qwen3-8B        │
+└─────────────────┘     └──────────────┘     │  (OpenAI-compatible)│
+        │                                    └─────────────────────┘
+        │                                              │
+        │                                              ▼
+        │                                    ┌─────────────────────┐
+        └────────────────────────────────────│       Ollama        │
+                                             │     (Fallback)      │
+                                             └─────────────────────┘
+
+Other containers can connect to the shared vLLM server via:
+  - Network: llm_network (external: true)
+  - API: http://vllm:8000/v1 (OpenAI-compatible)
 ```
 
 ## Requirements

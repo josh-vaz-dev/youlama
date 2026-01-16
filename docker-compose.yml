@@ -1,19 +1,38 @@
 version: '3.8'
 
 services:
-  # vLLM inference server (primary LLM backend)
+  # ============================================================================
+  # SHARED vLLM INFERENCE SERVER
+  # ============================================================================
+  # This is a shared LLM service - other containers can connect to it!
+  # Using Qwen3-8B - best general-purpose model for 24GB VRAM (May 2025)
+  #
+  # Features:
+  #   - Thinking mode: Complex reasoning tasks (enable with /think in prompt)
+  #   - Non-thinking mode: Fast responses (enable with /no_think in prompt)
+  #   - 32K context (131K with YaRN)
+  #   - OpenAI-compatible API at http://vllm:8000/v1
+  #
+  # Other containers can use this by:
+  #   1. Joining the 'llm_network' network
+  #   2. Setting OPENAI_API_BASE=http://vllm:8000/v1
+  #   3. Using any OpenAI-compatible client library
+  # ============================================================================
   vllm:
-    image: vllm/vllm-openai:latest
-    container_name: youlama-vllm
+    image: vllm/vllm-openai:v0.8.5
+    container_name: shared-vllm-server
     command:
-      - --model=Qwen/Qwen2.5-14B-Instruct
+      - --model=Qwen/Qwen3-8B
       - --dtype=half
-      - --max-model-len=8192
-      - --gpu-memory-utilization=0.7
+      - --max-model-len=16384
+      - --gpu-memory-utilization=0.85
       - --enable-chunked-prefill
       - --disable-log-requests
+      - --enforce-eager
+      - --enable-reasoning
+      - --reasoning-parser=deepseek_r1
     networks:
-      - youlama_network
+      - llm_network
     deploy:
       resources:
         reservations:
@@ -22,20 +41,22 @@ services:
               count: 1
               capabilities: [ gpu ]
         limits:
-          memory: 20G
+          memory: 24G
     shm_size: '8g'
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
     ports:
+      # Exposed on localhost for direct access & testing
+      # Other containers should use http://vllm:8000 via llm_network
       - "127.0.0.1:8000:8000"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 120s
+      retries: 5
+      start_period: 300s
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -43,6 +64,9 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # ============================================================================
+  # YOULAMA APPLICATION
+  # ============================================================================
   youlama:
     build:
       context: .
@@ -74,6 +98,10 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
       - OLLAMA_HOST=host.docker.internal
+      # vLLM connection (shared service)
+      - VLLM_BASE_URL=http://vllm:8000/v1
+      - OPENAI_API_BASE=http://vllm:8000/v1
+      - OPENAI_API_KEY=not-needed
       # Security: Disable Gradio analytics
       - GRADIO_ANALYTICS_ENABLED=false
       # RTX 4090 optimization
@@ -91,9 +119,9 @@ services:
         limits:
           memory: 12G
 
-    # Network configuration
+    # Network configuration - connects to shared LLM network
     networks:
-      - youlama_network
+      - llm_network
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -122,5 +150,10 @@ volumes:
     driver: local
 
 networks:
-  youlama_network:
+  # Shared network for LLM access - other compose files can connect with:
+  #   networks:
+  #     llm_network:
+  #       external: true
+  llm_network:
+    name: llm_network
     driver: bridge

@@ -239,10 +239,54 @@ addopts = -v --showlocals -ra --strict-markers
 ### config.ini Sections
 
 - `[whisper]` - Transcription model settings
-- `[ollama]` - LLM backend configuration
+- `[vllm]` - vLLM backend configuration (primary)
+- `[ollama]` - Ollama backend configuration (fallback)
 - `[app]` - Server/UI settings
 - `[models]` - Available model list
 - `[languages]` - Supported languages
+
+---
+
+## LLM Model Configuration
+
+### Current Model: Qwen3-8B (Recommended)
+
+| Property | Value |
+|----------|-------|
+| **Model** | `Qwen/Qwen3-8B` |
+| **Parameters** | 8.2B |
+| **Context Length** | 32K native, 131K with YaRN |
+| **VRAM Usage** | ~17GB (fits RTX 4090 24GB) |
+| **Release** | May 2025 |
+| **Best For** | Summarization, instruction following |
+
+### Why Qwen3-8B?
+
+1. **Thinking Mode** - Can reason through complex transcripts before summarizing
+2. **Non-Thinking Mode** - Fast simple summaries when speed matters
+3. **Superior Instruction Following** - Better at following detailed summarization prompts
+4. **Long Context** - Handles full YouTube transcripts (32K tokens native)
+5. **Latest Architecture** - State-of-the-art performance (May 2025)
+
+### Alternative Models (fits 24GB VRAM)
+
+| Model | Parameters | Context | Notes |
+|-------|------------|---------|-------|
+| `Qwen/Qwen2.5-7B-Instruct` | 7B | 128K | Stable, proven |
+| `meta-llama/Llama-3.1-8B-Instruct` | 8B | 128K | Requires HF auth |
+| `mistralai/Mistral-7B-Instruct-v0.3` | 7B | 32K | Fast inference |
+
+### vLLM Configuration (docker-compose.yml)
+
+```yaml
+command:
+  - --model=Qwen/Qwen3-8B
+  - --dtype=half
+  - --max-model-len=16384
+  - --gpu-memory-utilization=0.85
+  - --enable-reasoning
+  - --reasoning-parser=deepseek_r1
+```
 
 ---
 

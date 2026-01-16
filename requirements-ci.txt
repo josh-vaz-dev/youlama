@@ -1,0 +1,26 @@
+# CI/CD test dependencies for YouLama
+# This file excludes GPU-dependent packages that can't install in CI environments
+# The conftest.py automatically mocks torch/faster_whisper for testing
+#
+# Usage: pip install -r requirements-ci.txt -r requirements-test.txt
+
+# Core application framework (works without GPU)
+gradio>=5.9.0
+
+# YouTube downloading
+yt-dlp>=2025.1.15
+
+# Ollama LLM integration
+ollama>=0.4.5
+
+# Audio processing
+ffmpeg-python>=0.2.0
+
+# Utilities
+python-dotenv>=1.0.1
+requests>=2.32.3
+configparser>=7.1.0
+
+# Lightweight mock-compatible versions for CI
+# These satisfy import requirements without GPU dependencies
+numpy>=1.26.0
