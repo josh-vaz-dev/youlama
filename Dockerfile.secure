@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    # Security: Enable Python hash randomization
+    # Security: Disable Python hash randomization for reproducibility
     PYTHONHASHSEED=random \
     # CUDA optimization for RTX 4090
     CUDA_MODULE_LOADING=LAZY \

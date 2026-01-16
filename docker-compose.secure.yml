@@ -1,3 +1,6 @@
+# Secure Docker Compose for YouLama
+# Hardened configuration for production use with RTX 4090
+
 version: '3.8'
 
 services:
@@ -7,6 +10,9 @@ services:
       dockerfile: Dockerfile.secure
     container_name: youlama-secure
     
+    # Security: Read-only root filesystem where possible
+    read_only: false  # Needs write for temp files and models
+    
     # Security: Drop all capabilities, add only what's needed
     cap_drop:
       - ALL
@@ -15,11 +21,11 @@ services:
     security_opt:
       - no-new-privileges:true
     
-    # Port binding - only localhost for security (use reverse proxy for external access)
+    # Port binding - only localhost for security
     ports:
       - "127.0.0.1:7860:7860"
     
-    # Volumes - use named volumes for persistence
+    # Volumes - use named volumes instead of bind mounts
     volumes:
       - youlama_models:/app/models
       - youlama_temp:/app/temp
@@ -44,6 +50,7 @@ services:
               count: 1
               capabilities: [gpu]
         limits:
+          # Limit memory to prevent OOM
           memory: 32G
     
     # Network configuration
@@ -73,3 +80,9 @@ volumes:
     driver: local
   youlama_temp:
     driver: local
+
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "true"
