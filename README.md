@@ -1,17 +1,36 @@
-# YouLama
+# YouLama - AI-Powered YouTube Transcription & Summarization
 
-A powerful web application for transcribing and summarizing YouTube videos and local media files using faster-whisper and Ollama.
+[![Tests](https://github.com/YOUR_USERNAME/YoutubeSummarizer/actions/workflows/tests.yml/badge.svg)](https://github.com/YOUR_USERNAME/YoutubeSummarizer/actions/workflows/tests.yml)
+[![Python 3.11-3.14](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Security: Bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+
+> Secure, production-ready YouTube video transcription and AI summarization service optimized for NVIDIA RTX 4090.
 
 ## Features
 
-- 🎥 YouTube video transcription with subtitle extraction
-- 🎙️ Local audio/video file transcription
-- 🤖 Automatic language detection
-- 📝 Multiple Whisper model options
-- 📚 AI-powered text summarization using Ollama
-- 🎨 Modern web interface with Gradio
-- 🐳 Docker support with CUDA
-- ⚙️ Configurable settings via config.ini
+- 🎥 **High-Quality Transcription**: Whisper large-v3 with enhanced quality settings
+- 🚀 **Multi-Backend AI**: vLLM (primary) with Ollama fallback for summarization
+- 🌟 **State-of-Art Models**: Qwen2.5-14B-Instruct for best summarization quality
+- 📺 **YouTube Support**: Auto-extract subtitles or transcribe audio
+- 🔒 **Security Hardened**: Non-root containers, localhost binding, capability dropping
+- ⚡ **RTX 4090 Optimized**: CUDA 12.3, Flash Attention 2, optimal memory settings
+- 🎨 **Modern Web Interface**: Gradio with real-time progress tracking
+
+## Architecture
+
+```
+┌─────────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Gradio Web    │────▶│   Whisper    │────▶│    vLLM     │
+│   Interface     │     │  large-v3    │     │ Qwen2.5-14B │
+└─────────────────┘     └──────────────┘     └─────────────┘
+        │                                            │
+        │                                            ▼
+        │                                    ┌─────────────┐
+        └────────────────────────────────────│   Ollama    │
+                                             │  (Fallback) │
+                                             └─────────────┘
+```
 
 ## Requirements
 
@@ -134,6 +153,94 @@ summarize_prompt = Please provide a comprehensive yet concise summary of the fol
 - Customizable prompt
 - Available for both local files and YouTube videos
 
+## Testing
+
+The project includes a comprehensive test suite with 80+ tests covering unit, integration, security, performance, and container testing.
+
+### Quick Start
+
+```bash
+# Activate virtual environment
+.venv\Scripts\activate  # Windows
+source .venv/bin/activate  # Linux/macOS
+
+# Install test dependencies
+pip install -r requirements-test.txt
+
+# Run all tests
+pytest
+
+# Run specific test categories
+pytest -m unit          # Unit tests only
+pytest -m integration   # Integration tests
+pytest -m security      # Security tests
+pytest -m performance   # Performance tests
+```
+
+### Test Categories
+
+| Category | Marker | Description |
+|----------|--------|-------------|
+| Unit | `@pytest.mark.unit` | Fast, isolated component tests |
+| Integration | `@pytest.mark.integration` | Tests involving multiple components |
+| Security | `@pytest.mark.security` | Security vulnerability tests |
+| Performance | `@pytest.mark.performance` | Benchmarks and load tests |
+| Container | `@pytest.mark.container` | CI/CD container service tests |
+| Docker | `@pytest.mark.docker` | Docker integration tests |
+| Smoke | `@pytest.mark.smoke` | Quick health checks |
+
+### Container Testing (CI/CD)
+
+Container tests validate the built Docker image in a CI/CD environment:
+
+```bash
+# Build and start the container
+docker build -t youlama:test .
+docker run -d --name youlama-app -p 7860:7860 youlama:test
+
+# Run container smoke tests
+pytest tests/test_container_service.py -v -m smoke --container-url=http://127.0.0.1:7860
+
+# Run all container tests
+pytest tests/test_container_service.py -v --container-url=http://127.0.0.1:7860
+
+# Cleanup
+docker stop youlama-app && docker rm youlama-app
+```
+
+### Coverage
+
+```bash
+# Generate coverage report
+pytest --cov=. --cov-report=html --cov-report=term
+
+# View HTML report
+open htmlcov/index.html  # macOS
+start htmlcov/index.html  # Windows
+```
+
+For detailed testing documentation, see [TESTING.md](TESTING.md).
+
+## CI/CD Pipeline
+
+GitHub Actions workflow runs on every push and pull request:
+
+| Job | Description | Runs After |
+|-----|-------------|-----------|
+| **test** | Unit & integration tests (Python 3.11-3.14 matrix) | - |
+| **security** | Bandit security scan, Safety dependency check | - |
+| **lint** | flake8, black, isort code quality | - |
+| **container** | Build image, run container tests, vulnerability scan | test, security |
+
+### Security Features
+
+- 🔒 Bandit static analysis for security vulnerabilities
+- 🔍 Safety dependency vulnerability scanning
+- 🐳 Trivy container image vulnerability scanning
+- 🔐 Minimal workflow permissions (`contents: read`)
+- 🚫 No credential persistence in checkout
+- ⏱️ Job timeouts to prevent runaway builds
+
 ## Tips
 
 - For better accuracy, use larger models (medium, large)
@@ -146,6 +253,40 @@ summarize_prompt = Please provide a comprehensive yet concise summary of the fol
 - The application runs in a Docker container with CUDA support
 - Models are downloaded and cached in the `models` directory
 - The container connects to the local Ollama instance using host.docker.internal
+
+## Security
+
+### Container Security
+
+The Docker container runs with security hardening:
+
+- **Non-root user**: Application runs as unprivileged user
+- **Capability dropping**: `--cap-drop ALL` removes all Linux capabilities
+- **No new privileges**: `--security-opt no-new-privileges:true`
+- **Read-only filesystem**: Container filesystem is read-only
+- **Localhost binding**: Ports bound to `127.0.0.1` only
+- **No sensitive data**: No secrets, API keys, or credentials stored in images
+
+### Sensitive Data Protection
+
+The following patterns are excluded from version control (`.gitignore`):
+
+- `.env`, `.env.local`, `.env.*.local` - Environment files
+- `secrets/`, `*.key`, `*.pem` - Secret files and keys
+- `credentials.json`, `config.ini.local` - Credentials
+- `*.log`, `logs/` - Log files that may contain sensitive data
+
+**Note:** The `config.ini` file contains only non-sensitive default configuration. Override sensitive values using environment variables or `config.ini.local` (gitignored).
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes and add tests
+4. Run the test suite: `pytest`
+5. Commit your changes: `git commit -m 'Add amazing feature'`
+6. Push to the branch: `git push origin feature/amazing-feature`
+7. Open a Pull Request
 
 ## License
 

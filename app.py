@@ -4,7 +4,7 @@ import torch
 import configparser
 from typing import List, Tuple, Optional
 import youtube_handler as yt
-from ollama_handler import OllamaHandler
+from llm_handler import UnifiedLLMHandler
 import logging
 from faster_whisper import WhisperModel
 import subprocess
@@ -67,6 +67,15 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 COMPUTE_TYPE = "float16" if DEVICE == "cuda" else "float32"
 BEAM_SIZE = config["whisper"].getint("beam_size")
 VAD_FILTER = config["whisper"].getboolean("vad_filter")
+# Quality enhancement parameters
+BEST_OF = config["whisper"].getint("best_of", fallback=5)
+PATIENCE = config["whisper"].getfloat("patience", fallback=1.0)
+TEMPERATURE = config["whisper"].getfloat("temperature", fallback=0)
+COMPRESSION_RATIO_THRESHOLD = config["whisper"].getfloat("compression_ratio_threshold", fallback=2.4)
+LOG_PROB_THRESHOLD = config["whisper"].getfloat("log_prob_threshold", fallback=-1.0)
+NO_SPEECH_THRESHOLD = config["whisper"].getfloat("no_speech_threshold", fallback=0.6)
+CONDITION_ON_PREVIOUS = config["whisper"].getboolean("condition_on_previous_text", fallback=True)
+WORD_TIMESTAMPS = config["whisper"].getboolean("word_timestamps", fallback=True)
 
 # Log device and compute type
 logger.info(f"PyTorch CUDA available: {torch.cuda.is_available()}")
@@ -89,11 +98,14 @@ SHARE = config["app"].getboolean("share")
 WHISPER_MODELS = config["models"]["available_models"].split(",")
 AVAILABLE_LANGUAGES = config["languages"]["available_languages"].split(",")
 
-# Initialize Ollama handler
-ollama = OllamaHandler()
-OLLAMA_AVAILABLE = ollama.is_available()
-OLLAMA_MODELS = ollama.get_available_models() if OLLAMA_AVAILABLE else []
-DEFAULT_OLLAMA_MODEL = ollama.get_default_model() if OLLAMA_AVAILABLE else None
+# Initialize Unified LLM handler with multi-backend support
+llm = UnifiedLLMHandler()
+LLM_AVAILABLE = llm.is_available()
+LLM_MODELS = llm.get_available_models() if LLM_AVAILABLE else []
+DEFAULT_LLM_MODEL = llm.get_default_model() if LLM_AVAILABLE else None
+ACTIVE_BACKEND = llm.get_active_backend() if LLM_AVAILABLE else "None"
+
+logger.info(f"LLM Backend: {ACTIVE_BACKEND}, Available: {LLM_AVAILABLE}")
 
 
 def load_model(model_name: str):
@@ -134,13 +146,21 @@ def transcribe_audio(
         # Load the model
         model = load_model(model_name)
 
-        # Transcribe the audio
-        logger.info("Starting audio transcription...")
+        # Transcribe the audio with quality-optimized settings
+        logger.info("Starting audio transcription with enhanced quality settings...")
         segments, info = model.transcribe(
             audio_file,
             language=language if language != "Auto-detect" else None,
             beam_size=BEAM_SIZE,
             vad_filter=VAD_FILTER,
+            best_of=BEST_OF,
+            patience=PATIENCE,
+            temperature=TEMPERATURE,
+            compression_ratio_threshold=COMPRESSION_RATIO_THRESHOLD,
+            log_prob_threshold=LOG_PROB_THRESHOLD,
+            no_speech_threshold=NO_SPEECH_THRESHOLD,
+            condition_on_previous_text=CONDITION_ON_PREVIOUS,
+            word_timestamps=WORD_TIMESTAMPS,
         )
 
         # Get the full text with timestamps
@@ -152,9 +172,9 @@ def transcribe_audio(
 
         # Generate summary if requested
         summary = None
-        if summarize and OLLAMA_AVAILABLE:
-            logger.info(f"Generating summary using Ollama model: {ollama_model}")
-            summary = ollama.summarize(full_text, ollama_model)
+        if summarize and LLM_AVAILABLE:
+            logger.info(f"Generating summary using LLM model: {ollama_model}")
+            summary = llm.summarize(full_text, ollama_model)
             if summary:
                 logger.info(f"Summary generated. Length: {len(summary)} characters")
             else:
@@ -199,11 +219,11 @@ def process_youtube_url(
                 with open(subtitle_path, "r", encoding="utf-8") as f:
                     text = f.read()
                     summary = None
-                    if summarize and OLLAMA_AVAILABLE:
+                    if summarize and LLM_AVAILABLE:
                         logger.info(
-                            f"Generating summary from subtitles using Ollama model: {ollama_model}"
+                            f"Generating summary from subtitles using LLM model: {ollama_model}"
                         )
-                        summary = ollama.summarize(text, ollama_model)
+                        summary = llm.summarize(text, ollama_model)
                         if summary:
                             logger.info(
                                 f"Summary generated. Length: {len(summary)} characters"
@@ -275,19 +295,19 @@ def create_interface():
                             yt_summarize_checkbox = gr.Checkbox(
                                 label="Generate AI Summary",
                                 value=False,
-                                interactive=OLLAMA_AVAILABLE,
+                                interactive=LLM_AVAILABLE,
                             )
                             yt_ollama_model_dropdown = gr.Dropdown(
                                 choices=(
-                                    OLLAMA_MODELS
-                                    if OLLAMA_AVAILABLE
+                                    LLM_MODELS
+                                    if LLM_AVAILABLE
                                     else ["No models available"]
                                 ),
                                 value=(
-                                    DEFAULT_OLLAMA_MODEL if OLLAMA_AVAILABLE else None
+                                    DEFAULT_LLM_MODEL if LLM_AVAILABLE else None
                                 ),
-                                label="Ollama Model",
-                                interactive=OLLAMA_AVAILABLE,
+                                label="LLM Model",
+                                interactive=LLM_AVAILABLE,
                             )
 
                         # Add status bar
@@ -311,7 +331,7 @@ def create_interface():
                         yt_source = gr.Textbox(label="Source", interactive=False)
 
                 # Add summary text box below the main output
-                if OLLAMA_AVAILABLE:
+                if LLM_AVAILABLE:
                     yt_summary_text = gr.Textbox(
                         label="AI Summary", lines=5, max_lines=10, value=""
                     )
@@ -367,7 +387,7 @@ def create_interface():
                         yt_output_text,
                         yt_detected_language,
                         yt_source,
-                        yt_summary_text if OLLAMA_AVAILABLE else gr.Textbox(),
+                        yt_summary_text if LLM_AVAILABLE else gr.Textbox(),
                         yt_status,
                     ],
                 )
@@ -403,19 +423,19 @@ def create_interface():
                             summarize_checkbox = gr.Checkbox(
                                 label="Generate AI Summary",
                                 value=False,
-                                interactive=OLLAMA_AVAILABLE,
+                                interactive=LLM_AVAILABLE,
                             )
                             ollama_model_dropdown = gr.Dropdown(
                                 choices=(
-                                    OLLAMA_MODELS
-                                    if OLLAMA_AVAILABLE
+                                    LLM_MODELS
+                                    if LLM_AVAILABLE
                                     else ["No models available"]
                                 ),
                                 value=(
-                                    DEFAULT_OLLAMA_MODEL if OLLAMA_AVAILABLE else None
+                                    DEFAULT_LLM_MODEL if LLM_AVAILABLE else None
                                 ),
-                                label="Ollama Model",
-                                interactive=OLLAMA_AVAILABLE,
+                                label="LLM Model",
+                                interactive=LLM_AVAILABLE,
                             )
 
                         # Add status bar
@@ -436,7 +456,7 @@ def create_interface():
                         detected_language = gr.Textbox(
                             label="Detected Language", interactive=False
                         )
-                        if OLLAMA_AVAILABLE:
+                        if LLM_AVAILABLE:
                             summary_text = gr.Textbox(
                                 label="AI Summary", lines=5, max_lines=10, value=""
                             )
@@ -464,9 +484,9 @@ def create_interface():
                         # Get the full text with timestamps
                         full_text = " ".join([segment.text for segment in segments])
 
-                        if summarize and OLLAMA_AVAILABLE:
+                        if summarize and LLM_AVAILABLE:
                             status = "Generating AI summary..."
-                            summary = ollama.summarize(full_text, ollama_model)
+                            summary = llm.summarize(full_text, ollama_model)
                             return (
                                 full_text,
                                 info.language,
@@ -497,7 +517,7 @@ def create_interface():
                     outputs=[
                         output_text,
                         detected_language,
-                        summary_text if OLLAMA_AVAILABLE else gr.Textbox(),
+                        summary_text if LLM_AVAILABLE else gr.Textbox(),
                         file_status,
                     ],
                 )
@@ -512,13 +532,14 @@ def create_interface():
         - Maximum audio duration is {MAX_DURATION // 60} minutes
         - YouTube videos will first try to use available subtitles
         - If no subtitles are available, the video will be transcribed
-        {"- AI-powered summarization is available for both local files and YouTube videos" if OLLAMA_AVAILABLE else "- AI-powered summarization is currently unavailable"}
+        {"- AI-powered summarization is available for both local files and YouTube videos" if LLM_AVAILABLE else "- AI-powered summarization is currently unavailable"}
         
         ### Status:
         - Device: {DEVICE}
         - Compute Type: {COMPUTE_TYPE}
-        - Ollama Status: {"Available" if OLLAMA_AVAILABLE else "Not Available"}
-        {"- Available Ollama Models: " + ", ".join(OLLAMA_MODELS) if OLLAMA_AVAILABLE else ""}
+        - LLM Backend: {ACTIVE_BACKEND}
+        - LLM Status: {"Available" if LLM_AVAILABLE else "Not Available"}
+        {"- Available LLM Models: " + ", ".join(LLM_MODELS) if LLM_AVAILABLE else ""}
         """
         )
 

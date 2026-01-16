@@ -1,14 +1,26 @@
-gradio>=4.0.0
-# Choose one of these whisper implementations:
-faster-whisper>=0.9.0
-torch>=2.0.0
-torchvision>=0.15.0
-torchaudio>=2.0.0
-yt-dlp>=2023.12.30
-python-dotenv>=1.0.0
-requests>=2.31.0
-ollama>=0.1.0
-# WhisperX dependencies
+# Updated dependencies as of January 2026 - Python 3.14.2 compatible
+# Core application framework
+gradio>=5.9.0
+
+# Whisper transcription (faster-whisper is more efficient than openai-whisper)
+faster-whisper>=1.1.0
+
+# PyTorch with CUDA 12.4 support
+# Install from PyTorch index for CUDA compatibility
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch>=2.5.1
+torchaudio>=2.5.1
+
+# YouTube downloading
+yt-dlp>=2025.1.15
+
+# Ollama LLM integration
+ollama>=0.4.5
+
+# Audio processing
 ffmpeg-python>=0.2.0
-pyannote.audio>=3.1.1
-configparser>=6.0.0
+
+# Utilities
+python-dotenv>=1.0.1
+requests>=2.32.3
+configparser>=7.1.0

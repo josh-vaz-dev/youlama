@@ -1,9 +1,25 @@
 import re
 import os
 import tempfile
-from typing import Optional, Tuple
+import shutil
+import atexit
+from typing import Optional, Tuple, List
 import yt_dlp
 from urllib.parse import urlparse, parse_qs
+
+# Track temp directories for cleanup
+_temp_dirs: List[str] = []
+
+def _cleanup_temp_dirs():
+    """Cleanup all temporary directories on exit."""
+    for temp_dir in _temp_dirs:
+        try:
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+        except Exception:
+            pass
+
+atexit.register(_cleanup_temp_dirs)
 
 
 def is_youtube_url(url: str) -> bool:
@@ -48,27 +64,41 @@ def get_video_info(url: str) -> dict:
 
 
 def download_video(url: str) -> Tuple[str, str]:
-    """Download video and return the path to the audio file."""
+    """Download video and return the path to the audio file with high quality extraction."""
     temp_dir = tempfile.mkdtemp()
+    _temp_dirs.append(temp_dir)  # Track for cleanup
     output_path = os.path.join(temp_dir, "%(id)s.%(ext)s")
 
+    # High quality audio extraction settings
     ydl_opts = {
-        "format": "bestaudio/best",
+        "format": "bestaudio[acodec=opus]/bestaudio[acodec=vorbis]/bestaudio/best",
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
-                "preferredcodec": "mp3",
-                "preferredquality": "192",
+                "preferredcodec": "wav",  # WAV for best Whisper quality
+                "preferredquality": "0",  # Lossless
             }
         ],
         "outtmpl": output_path,
         "quiet": True,
+        "no_warnings": True,
+        # Quality options
+        "prefer_ffmpeg": True,
+        "keepvideo": False,
+        # Audio normalization for consistent volume
+        "postprocessor_args": [
+            "-ar", "16000",  # 16kHz sample rate optimal for Whisper
+            "-ac", "1",      # Mono channel
+        ],
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             info = ydl.extract_info(url, download=True)
-            audio_path = os.path.join(temp_dir, f"{info['id']}.mp3")
+            audio_path = os.path.join(temp_dir, f"{info['id']}.wav")
+            # Fallback to mp3 if wav doesn't exist
+            if not os.path.exists(audio_path):
+                audio_path = os.path.join(temp_dir, f"{info['id']}.mp3")
             return audio_path, info["title"]
         except Exception as e:
             raise Exception(f"Error downloading video: {str(e)}")
@@ -95,6 +125,7 @@ def get_available_subtitles(url: str) -> list:
 def download_subtitles(url: str, lang: str = "en") -> Optional[str]:
     """Download subtitles for the video."""
     temp_dir = tempfile.mkdtemp()
+    _temp_dirs.append(temp_dir)  # Track for cleanup
     output_path = os.path.join(temp_dir, "%(id)s.%(ext)s")
 
     ydl_opts = {
@@ -115,3 +146,20 @@ def download_subtitles(url: str, lang: str = "en") -> Optional[str]:
             return None
         except Exception:
             return None
+
+
+def cleanup_temp_file(file_path: str) -> bool:
+    """Manually cleanup a temporary file and its parent directory if empty."""
+    try:
+        if file_path and os.path.exists(file_path):
+            parent_dir = os.path.dirname(file_path)
+            os.remove(file_path)
+            # Remove parent if it's a temp dir and now empty
+            if parent_dir.startswith(tempfile.gettempdir()) and not os.listdir(parent_dir):
+                os.rmdir(parent_dir)
+                if parent_dir in _temp_dirs:
+                    _temp_dirs.remove(parent_dir)
+            return True
+    except Exception:
+        pass
+    return False

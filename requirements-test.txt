@@ -1,0 +1,38 @@
+# Test dependencies for YouLama - Python 3.14.2 compatible
+# Install with: pip install -r requirements-test.txt
+# Updated: January 2026
+#
+# NOTE: Production dependencies (gradio, ollama, etc.) are required for
+# tests to run since they mock at the module level. Install requirements.txt first.
+# For environments without GPU/CUDA, the conftest.py automatically mocks torch/faster_whisper.
+
+# Core testing framework - Python 3.14 compatible versions
+pytest>=8.3.4
+pytest-cov>=6.0.0
+pytest-mock>=3.14.0
+pytest-xdist>=3.5.0
+pytest-timeout>=2.3.1
+pytest-asyncio>=0.25.2
+
+# Mocking and fixtures
+faker>=33.1.0
+factory-boy>=3.3.1
+responses>=0.25.6
+freezegun>=1.5.1
+
+# Coverage tools
+coverage[toml]>=7.6.10
+
+# Performance testing
+pytest-benchmark>=5.1.0
+
+# Security testing
+bandit>=1.8.2
+
+# Additional utilities
+pytest-html>=4.1.1
+pytest-json-report>=1.5.0
+
+# Container service testing (CI/CD)
+requests>=2.32.0
+pyyaml>=6.0.1

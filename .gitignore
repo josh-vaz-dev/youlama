@@ -70,3 +70,17 @@ secrets/
 *.crt
 credentials.json
 config.ini.local
+.env.local
+.env.*.local
+
+# API keys and tokens - prevent accidental commits
+*_token.txt
+*_api_key.txt
+*.secret
+auth.json
+oauth*.json
+
+# Database files that may contain sensitive data
+*.db
+*.sqlite
+*.sqlite3
